@@ -69,89 +69,102 @@ data /strings
     [] opening_3_line_4
         ("TRANOID.")
 
-ct UU[] opening_1_line_starts = UU[] ($2203, $2243, 0)
-ct UU[] opening_2_line_starts = UU[] ($2201, $2246, $228b, 0)
-ct UU[] opening_3_line_starts = UU[] ($2206, $2244, $2285, $22cc, 0)
+ct UU[] opening_line_starts = UU[] ($2203, $2243, 0, $2201, $2246, $228b, 0, $2206, $2244, $2285, $22cc, 0)
 
-ct CC/strings[] opening_1_lines = CC/strings[] (@opening_1_line_1, @opening_1_line_2)
-ct CC/strings[] opening_2_lines = CC/strings[] (@opening_2_line_1, @opening_2_line_2, @opening_2_line_3)
-ct CC/strings[] opening_3_lines = CC/strings[] (@opening_3_line_1, @opening_3_line_2, @opening_3_line_3, @opening_3_line_4)
+ct CC/rlz[] opening_gfx = CC/rlz[] (@opening_1, @opening_2, @opening_3)
+
+ct CC/strings[] opening_lines = CC/strings[] (
+    @opening_1_line_1, @opening_1_line_2, 0,
+    @opening_2_line_1, @opening_2_line_2, @opening_2_line_3, 0,
+    @opening_3_line_1, @opening_3_line_2, @opening_3_line_3, @opening_3_line_4, 0
+)
+
+ct UU[] delays = UU[] ($100, $100, $180)
+
+ct U[] opening_palettes1 = U[] ($12, $16, $22)
+ct U[] opening_palettes2 = U[] ($2c, $1c, $15)
+ct U[] opening_palettes3 = U[] ($32, $10, $32)
 
 vars /title
     UF scroll = $4f
     UF sprite_y = 2
     Bool scrolling = true
-    U attract_mode_bank = 1
-    U attract_line_start_index = 0
     U attract_src_index = 0
-    UU attract_cur_addr = opening_1_line_starts[0]
+    UU attract_dst_addr = opening_line_starts[0]
     U attract_line_char = 0
-    U frame = 0
+    UU frame = 0
     Bool attract_done_with_text = false
 
 mode main()
-    {PPUCTRL}(0)
-    {PPUMASK}(0)
-
-    // Set the palette:
-    palette = title_palette_initial
-    ppu_upload_palette()
-
-    // Setup the nametable:
-    ppu_reset_addr($2000)
-    ppu_upload_rlz(@title_screen)
-    ppu_reset_scroll(0, scroll.a)
-
-    // avoid one frame of logo visible at the bottom
-    //{PPUMASK}(PPUMASK_ON)
-    {PPUCTRL}(PPUCTRL_NMI_ON)
 
     goto mode title() : preserves // nothing
 
 nmi attract_nmi()
     if ready
         ppu_upload_palette()
-        if !attract_done_with_text && frame & 7 == 0
+        if !attract_done_with_text && frame & 3 == 0
             {PPUSTATUS}()
-            {PPUADDR}(attract_cur_addr.b)
-            {PPUADDR}(attract_cur_addr.a)
+            {PPUADDR}(attract_dst_addr.b)
+            {PPUADDR}(attract_dst_addr.a)
             {PPUDATA}(attract_line_char)
 
             attract_src_index += 1
-            attract_cur_addr += 1
+            attract_dst_addr += 1
 
     ppu_reset_scroll(0, 0)
     {PPUMASK}(PPUMASK_ON)
     {PPUCTRL}(PPUCTRL_NMI_ON)
 
-mode attract()
-: nmi attract_nmi
+fn upload_attract_gfx(U num)
     {PPUCTRL}(0)
     {PPUMASK}(0)
-    state(attract_mode_bank)
+    state(num + 1)
 
-    palette[0] = $12
-    palette[1] = $2c
-    palette[2] = $32
+    palette[0] = opening_palettes1[num]
+    palette[1] = opening_palettes2[num]
+    palette[2] = opening_palettes3[num]
     ppu_upload_palette()
 
     ppu_reset_addr($2000)
-    ppu_upload_rlz(@opening_1)
+    ppu_upload_rlz(opening_gfx[num])
     ppu_reset_scroll(0, 0)
     
     {PPUCTRL}(PPUCTRL_NMI_ON)
 
+mode attract()
+: nmi attract_nmi
+    U attract_mode_scene = 0
+    U attract_line_num = 0
+
+    upload_attract_gfx(attract_mode_scene)
+
     while true
-        attract_line_char = opening_1_lines[attract_line_start_index][attract_src_index]
-        if attract_line_char == charmap.sentinel
-            attract_src_index = 0
-            attract_line_start_index += 1
-            attract_cur_addr = opening_1_line_starts[attract_line_start_index]
-            if attract_cur_addr == 0
-                attract_done_with_text = true
-            else
-                attract_line_char = opening_1_lines[attract_line_start_index][attract_src_index]
+        // load next character
+        if !attract_done_with_text
+            attract_line_char = opening_lines[attract_line_num][attract_src_index]
+            if attract_line_char == charmap.sentinel
+                // end of string, try to move on to next
+                attract_src_index = 0
+                attract_line_num += 1
+                attract_dst_addr = opening_line_starts[attract_line_num]
+                if attract_dst_addr == 0
+                    // all lines drawn
+                    attract_done_with_text = true
+                else
+                    // do this again with first char of next line
+                    attract_line_char = opening_lines[attract_line_num][attract_src_index]
         frame += 1
+        if frame >= delays[attract_mode_scene]
+            attract_mode_scene += 1
+            if attract_mode_scene == 3
+                goto mode title() : preserves
+            attract_line_num += 1
+            attract_src_index = 0
+            attract_dst_addr = opening_line_starts[attract_line_num]
+            attract_done_with_text = false
+            attract_line_char = opening_lines[attract_line_num][attract_src_index]
+            frame = 0
+            upload_attract_gfx(attract_mode_scene)
         nmi
 
     // Animate the CHRROM:
@@ -183,6 +196,22 @@ nmi title_nmi()
 
 mode title()
 : nmi title_nmi
+    {PPUCTRL}(0)
+    {PPUMASK}(0)
+
+    // Set the palette:
+    palette = title_palette_initial
+    ppu_upload_palette()
+
+    // Setup the nametable:
+    ppu_reset_addr($2000)
+    ppu_upload_rlz(@title_screen)
+    ppu_reset_scroll(0, scroll.a)
+
+    // avoid one frame of logo visible at the bottom
+    //{PPUMASK}(PPUMASK_ON)
+    {PPUCTRL}(PPUCTRL_NMI_ON)
+
     state(0)
     set_oam(0, $50, sprite_y.a, $50, 0)
 
