@@ -77,6 +77,7 @@ fn upload_attract_gfx(U num)
     palette[0] = opening_palettes1[num]
     palette[1] = opening_palettes2[num]
     palette[2] = opening_palettes3[num]
+    palette[8] = $30 // in case they hit start before the title screen ends
     ppu_upload_palette()
 
     ppu_reset_addr($2000)
@@ -91,7 +92,8 @@ mode attract()
     U attract_mode_scene = 0
     U attract_line_num = 0
     // this freezes on the first screen if i use a byte here
-    // instead of a short... no idea why
+    // instead of a short... no idea why, even if it was a range thing
+    // it would wrap around eventually right?
     UU delay = 0
 
     hide_oam(0)
@@ -114,6 +116,7 @@ mode attract()
                     attract_line_char = opening_lines[attract_line_num][attract_src_index]
         else
             delay += 1
+            // is this if statement compiled improperly?
             if delay >= delays[attract_mode_scene]
                 delay = 0
                 attract_mode_scene += 1
