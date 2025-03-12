@@ -15,20 +15,6 @@ ct U[25] title_palette_initial = U[25](
     $0f // background color
 )
 
-ct U[25] tranoid_palette = U[25](
-    $2c, $27, $20, // title. use $30 for white?
-    $12, $2c, $32, // opening 1
-    $16, $1c, $10, // opening 2
-    $22, $15, $32, // opening 3
-
-    $02, $14, $26,
-    $04, $16, $28,
-    $06, $18, $2A,
-    $08, $1A, $2C,
-
-    $0f // black
-)
-
 ct U[] hidden_credit = U[] (
     $c0, $c1, $c2, $0, // NES
     $c3, $c9, $c4, $c5, $0, // PORT
@@ -79,7 +65,7 @@ ct CC/strings[] opening_lines = CC/strings[] (
     @opening_3_line_1, @opening_3_line_2, @opening_3_line_3, @opening_3_line_4, 0
 )
 
-ct UU[] delays = UU[] ($100, $100, $180)
+ct UU[] delays = UU[] ($100, $120, $180)
 
 ct U[] opening_palettes1 = U[] ($12, $16, $22)
 ct U[] opening_palettes2 = U[] ($2c, $1c, $15)
@@ -101,6 +87,7 @@ mode main()
 
 nmi attract_nmi()
     if ready
+        ppu_upload_oam_poll_pads(0)
         ppu_upload_palette()
         if !attract_done_with_text && frame & 3 == 0
             {PPUSTATUS}()
@@ -136,6 +123,7 @@ mode attract()
     U attract_mode_scene = 0
     U attract_line_num = 0
 
+    hide_oam(0)
     upload_attract_gfx(attract_mode_scene)
 
     while true
@@ -227,6 +215,11 @@ mode title()
 
                 palette[5] = $22
                 palette[8] = $30
+
+        frame += 1
+        if frame >= $200
+            goto mode attract()
+            : preserves
 
         update_pads()
         if pads[0].pressed & BUTTON_START
