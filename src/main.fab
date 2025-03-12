@@ -30,14 +30,12 @@ data /rlz
         file(rlz, "title.nam")
 
 vars /title
-    UF scroll = $4f
-    UF sprite_y = 2
-    Bool scrolling = true
+    UF scroll
+    UF sprite_y
     UU frame = 0
 
 mode main()
-
-    goto mode title() : preserves // nothing
+    goto mode title(true) : preserves // nothing
 
 nmi title_nmi()
     if ready
@@ -48,7 +46,7 @@ nmi title_nmi()
     {PPUMASK}(PPUMASK_ON)
     {PPUCTRL}(PPUCTRL_NMI_ON)
 
-    if scrolling
+    if scroll != 0
         // wait until rendering hits the bottom of the logo
         ppu_await_status(PPUSTATUS_SPR_0)
         // move sprite 0 one pixel down to stay in sync with logo
@@ -57,7 +55,7 @@ nmi title_nmi()
         // turn off rendering to hide wrap around
         {PPUMASK}(0)
 
-mode title()
+mode title(Bool scroll_logo)
 : nmi title_nmi
     {PPUCTRL}(0)
     {PPUMASK}(0)
@@ -69,6 +67,12 @@ mode title()
     // Setup the nametable:
     ppu_reset_addr($2000)
     ppu_upload_rlz(@title_screen)
+    if scroll_logo
+        scroll = $4f
+        sprite_y = 2
+    else
+        scroll = 0
+
     ppu_reset_scroll(0, scroll.a)
 
     // avoid one frame of logo visible at the bottom
@@ -76,17 +80,15 @@ mode title()
     {PPUCTRL}(PPUCTRL_NMI_ON)
 
     state(0)
+    hide_oam(0)
     set_oam(0, $50, sprite_y.a, $50, 0)
 
     while true
-        if scrolling
+        if scroll != 0
             scroll -= 0.5
-            if scroll == 0
-                scrolling = false
-
-                // make text visible
-                palette[5] = $22
-                palette[8] = $30
+        else
+            palette[5] = $22
+            palette[8] = $30
 
         frame += 1
         if frame >= $200

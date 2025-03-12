@@ -121,13 +121,18 @@ mode attract()
                 delay = 0
                 attract_mode_scene += 1
                 if attract_mode_scene == 3
-                    goto mode title() : preserves
+                    goto mode title(true) : preserves
                 attract_line_num += 1
                 attract_src_index = 0
                 attract_dst_addr = opening_line_starts[attract_line_num]
                 attract_done_with_text = false
                 attract_line_char = opening_lines[attract_line_num][attract_src_index]
                 upload_attract_gfx(attract_mode_scene)
+
+        update_pads()
+        if pads[0].pressed & BUTTON_START
+            goto mode title(false)
+            : preserves
 
         frame += 1
         nmi
