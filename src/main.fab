@@ -1,43 +1,155 @@
-/*
- * Copyright (c) 2023, Patrick Bene
- * This file is distributed under the Boost Software License, Version 1.0.
- * See LICENSE_1_0.txt or https://www.boost.org/LICENSE_1_0.txt 
- */
+charmap text("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ.&\0", '\0', $d0)
+: stows /strings
 
-// Plays an animation using CNROM
+ct U[25] title_palette_initial = U[25](
+    $2c, $27, $30,
+    $0f, $0f, $0f, // make text black originally
+    $0f, $0f, $0f,
+    $0f, $0f, $0f,
+
+    $0f, $0f, $0f,
+    $0f, $0f, $0f,
+    $0f, $0f, $0f,
+    $0f, $0f, $0f,
+
+    $0f // background color
+)
+
+ct U[25] tranoid_palette = U[25](
+    $2c, $27, $20, // title. use $30 for white?
+    $12, $2c, $32, // opening 1
+    $16, $1c, $10, // opening 2
+    $22, $15, $32, // opening 3
+
+    $02, $14, $26,
+    $04, $16, $28,
+    $06, $18, $2A,
+    $08, $1A, $2C,
+
+    $0f // black
+)
+
+data /rlz
+    [] title_screen
+        file(rlz, "title.nam")
+    [] opening_1
+        file(rlz, "opening1/opening1.nam")
+    [] opening_2
+        file(rlz, "opening2/opening2.nam")
+    [] opening_3
+        file(rlz, "opening3/opening3.nam")
+
+vars /title
+    UF scroll = $4f
+    UF sprite_y = 2
+    Bool scrolling = true
 
 mode main()
+    {PPUCTRL}(0)
+    {PPUMASK}(0)
+
     // Set the palette:
-    palette = example_palette
+    palette = title_palette_initial
     ppu_upload_palette()
 
     // Setup the nametable:
     ppu_reset_addr($2000)
-    for U y = 0; y < 30; y += 1
-        for U x = 0; x < 32; x += 1
-            {PPUDATA}((x & %1111) + ((y & %1111) << 4))
-    for U a = 0; a < 64; a += 1
-        {PPUDATA}(0)
-    ppu_set_scroll(0, 0)
+    ppu_upload_rlz(@title_screen)
+    ppu_reset_scroll(0, scroll.a)
+
+    // avoid one frame of logo visible at the bottom
+    //{PPUMASK}(PPUMASK_ON)
+    {PPUCTRL}(PPUCTRL_NMI_ON)
+
+    goto mode title() : preserves // nothing
+
+nmi attract_nmi()
+    if ready
+        ppu_upload_palette()
+    ppu_reset_scroll(0, 0)
+    {PPUMASK}(PPUMASK_ON)
+    {PPUCTRL}(PPUCTRL_NMI_ON)
+
+mode attract()
+: nmi attract_nmi
+    {PPUCTRL}(0)
+    {PPUMASK}(0)
+    state(1)
+
+    palette[0] = $12
+    palette[1] = $2c
+    palette[2] = $32
+    ppu_upload_palette()
+
+    ppu_reset_addr($2000)
+    ppu_upload_rlz(@opening_1)
+    ppu_reset_scroll(0, 0)
+    
+    {PPUCTRL}(PPUCTRL_NMI_ON)
+
+    while true
+        nmi
 
     // Animate the CHRROM:
-    U frame = 0
-    state(frame)
-    {PPUCTRL}(PPUCTRL_NMI_ON)
-    {PPUMASK}(PPUMASK_ON)
-    while true
-        state(frame)
-        frame += 1
-        frame &= %11
-        wait(8)
+    // U frame = 0
+    // state(frame)
+    // while true
+    //     state(frame)
+    //     frame += 1
+    //     frame &= %11
+    //     wait(8)
 
-// Define the tileset (commonly called CHR):
+nmi title_nmi()
+    if ready
+        ppu_upload_oam_poll_pads(0)
+        ppu_upload_palette()
+    ppu_reset_scroll(0, scroll.a)
+
+    {PPUMASK}(PPUMASK_ON)
+    {PPUCTRL}(PPUCTRL_NMI_ON)
+
+    if scrolling
+        // wait until rendering hits the bottom of the logo
+        ppu_await_status(PPUSTATUS_SPR_0)
+        // move sprite 0 one pixel down to stay in sync with logo
+        set_oam_y(0, sprite_y.a)
+        sprite_y += 0.5
+        // turn off rendering to hide wrap around
+        {PPUMASK}(0)
+
+mode title()
+: nmi title_nmi
+    state(0)
+    set_oam(0, $50, sprite_y.a, $50, 0)
+
+    while true
+        if scrolling
+            scroll -= 0.5
+            if scroll == 0
+                scrolling = false
+
+                palette[0] = $2c
+                palette[1] = $27
+                palette[2] = $20
+
+                palette[5] = $22
+                palette[8] = $30
+
+        update_pads()
+        if pads[0].pressed & BUTTON_START
+            goto mode attract()
+            : preserves
+
+        nmi
+
+mode game()
+
 chrrom
-    file(fmt, "chr0.png")
-    file(fmt, "chr0.png")
-    file(fmt, "chr1.png")
-    file(fmt, "chr1.png")
-    file(fmt, "chr2.png")
-    file(fmt, "chr2.png")
-    file(fmt, "chr3.png")
-    file(fmt, "chr3.png")
+    file(raw, "title.chr")
+    file(raw, "title.chr")
+    file(fmt, "opening1/opening1.chr")
+    file(fmt, "opening1/opening1.chr")
+    file(fmt, "opening2/opening2.chr")
+    file(fmt, "opening2/opening2.chr")
+    file(fmt, "opening3/opening3.chr")
+    file(fmt, "opening3/opening3.chr")
