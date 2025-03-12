@@ -1,4 +1,4 @@
-charmap text("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ.&\0", '\0', $d0)
+charmap("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ.,:?!\"'/()& \0", '\0', $d0)
 : stows /strings
 
 ct U[25] title_palette_initial = U[25](
@@ -29,6 +29,14 @@ ct U[25] tranoid_palette = U[25](
     $0f // black
 )
 
+ct U[] hidden_credit = U[] (
+    $c0, $c1, $c2, $0, // NES
+    $c3, $c9, $c4, $c5, $0, // PORT
+    $c6, $c7, $0, // BY
+    $c8, $c9, $c0, $c2, $c5, $c8, $ca, $c2, $c5, $0, // CONSTCAST
+    $cb, $cc, $cb, $cd
+) // 2025
+
 data /rlz
     [] title_screen
         file(rlz, "title.nam")
@@ -39,10 +47,47 @@ data /rlz
     [] opening_3
         file(rlz, "opening3/opening3.nam")
 
+data /strings
+    [] opening_1_line_1
+        ("TRAN IS A SPACE ALIEN GIRL")
+    [] opening_1_line_2
+        ("WHO CAME FROM THE TRANSTAR.")
+
+    [] opening_2_line_1
+        ("SHE WANDERS AROUND LOOKING FOR")
+    [] opening_2_line_2
+        ("TRANOID SPREAD TO THE")
+    [] opening_2_line_3
+        ("BIRTHPLACE.")
+
+    [] opening_3_line_1
+        ("DODGE THE ADVANCE OF")
+    [] opening_3_line_2
+        ("THE EVIL SPACE ALIENS AND")
+    [] opening_3_line_3
+        ("APPROACH THE MISTERY OF")
+    [] opening_3_line_4
+        ("TRANOID.")
+
+ct UU[] opening_1_line_starts = UU[] ($2203, $2243, 0)
+ct UU[] opening_2_line_starts = UU[] ($2201, $2246, $228b, 0)
+ct UU[] opening_3_line_starts = UU[] ($2206, $2244, $2285, $22cc, 0)
+
+ct CC/strings[] opening_1_lines = CC/strings[] (@opening_1_line_1, @opening_1_line_2)
+ct CC/strings[] opening_2_lines = CC/strings[] (@opening_2_line_1, @opening_2_line_2, @opening_2_line_3)
+ct CC/strings[] opening_3_lines = CC/strings[] (@opening_3_line_1, @opening_3_line_2, @opening_3_line_3, @opening_3_line_4)
+
 vars /title
     UF scroll = $4f
     UF sprite_y = 2
     Bool scrolling = true
+    U attract_mode_bank = 1
+    U attract_line_start_index = 0
+    U attract_src_index = 0
+    UU attract_cur_addr = opening_1_line_starts[0]
+    U attract_line_char = 0
+    U frame = 0
+    Bool attract_done_with_text = false
 
 mode main()
     {PPUCTRL}(0)
@@ -66,6 +111,15 @@ mode main()
 nmi attract_nmi()
     if ready
         ppu_upload_palette()
+        if !attract_done_with_text && frame & 7 == 0
+            {PPUSTATUS}()
+            {PPUADDR}(attract_cur_addr.b)
+            {PPUADDR}(attract_cur_addr.a)
+            {PPUDATA}(attract_line_char)
+
+            attract_src_index += 1
+            attract_cur_addr += 1
+
     ppu_reset_scroll(0, 0)
     {PPUMASK}(PPUMASK_ON)
     {PPUCTRL}(PPUCTRL_NMI_ON)
@@ -74,7 +128,7 @@ mode attract()
 : nmi attract_nmi
     {PPUCTRL}(0)
     {PPUMASK}(0)
-    state(1)
+    state(attract_mode_bank)
 
     palette[0] = $12
     palette[1] = $2c
@@ -88,6 +142,16 @@ mode attract()
     {PPUCTRL}(PPUCTRL_NMI_ON)
 
     while true
+        attract_line_char = opening_1_lines[attract_line_start_index][attract_src_index]
+        if attract_line_char == charmap.sentinel
+            attract_src_index = 0
+            attract_line_start_index += 1
+            attract_cur_addr = opening_1_line_starts[attract_line_start_index]
+            if attract_cur_addr == 0
+                attract_done_with_text = true
+            else
+                attract_line_char = opening_1_lines[attract_line_start_index][attract_src_index]
+        frame += 1
         nmi
 
     // Animate the CHRROM:
