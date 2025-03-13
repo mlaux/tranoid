@@ -1,5 +1,41 @@
 // Main gameplay mode
 
+//ct U[3] tran_palette = U[3] ($2c, $27, $30)
+// this does not work with a 'ct' array??
+// for U k = 0; k < len(tran_palette); k += 1
+//     palette[PALETTE_SPR + k] = tran_palette[k]
+
+ct U[] game_palette = U[] (
+    $0f, $10, $30, // lane color 1
+    $2d, $10, $30, // lane color 2
+    $0f, $0f, $0f, 
+    $0f, $0f, $0f, 
+
+    $2c, $27, $30, // tran color
+    $0f, $0f, $0f, 
+    $0f, $0f, $0f, 
+    $0f, $0f, $0f, 
+
+    $0f,
+)
+
+ct U MIN_X = $10
+ct U MAX_X = $f0
+ct U MIN_Y = $30
+ct U MAX_Y = $b0
+
+
+ct U TILE_LEFT_RUNNING = $60
+ct U TILE_RIGHT_RUNNING = $62
+ct U TILE_LEFT_STANDING = $64
+ct U TILE_RIGHT_STANDING = $66
+
+vars /game
+    UF player_x = $78
+    UF player_y = $70
+    // U[3] tran_palette = U[3] ($2c, $27, $30)
+
+
 data /rlz
     [] game_screen
         file(rlz, "game.nam")
@@ -8,17 +44,65 @@ mode game()
 : nmi game_nmi
     {PPUCTRL}(0)
     {PPUMASK}(0)
+
     state(0)
-    palette = example_palette
+
+    palette = game_palette
     ppu_upload_palette()
+    
     ppu_reset_addr($2000)
     ppu_upload_rlz(@game_screen)
+    
+    hide_oam(0)
+    
     {PPUCTRL}(PPUCTRL_NMI_ON)
+    
     while true
+        update_pads()
+
+        U player_moving = pads[0].held & BUTTON_DPAD
+        U player_flags = 0 // for horizontal flip
+        UF new_x = player_x
+        UF new_y = player_y
+    
+        if pads[0].held & BUTTON_RIGHT
+            new_x += 1.5
+        if pads[0].held & BUTTON_UP
+            new_y -= 1.5
+        if pads[0].held & BUTTON_LEFT
+            new_x -= 1.5
+            player_flags |= ATTR_H_FLIP
+        if pads[0].held & BUTTON_DOWN
+            new_y += 1.5
+        
+        if new_x >= MIN_X && new_x < MAX_X
+            player_x = new_x
+        if new_y >= MIN_Y && new_y < MAX_Y
+            player_y = new_y
+
+        U tile_left = TILE_LEFT_STANDING
+        U tile_right = TILE_RIGHT_STANDING
+        if player_moving && frame & 15 >= 8
+            tile_left = TILE_LEFT_RUNNING
+            tile_right = TILE_RIGHT_RUNNING
+
+        // need to swap the tile IDs not just the tile contents
+        if player_flags
+            U temp = tile_left
+            tile_left = tile_right
+            tile_right = temp
+
+        set_oam(0, player_x.a, player_y.a, tile_left, player_flags)
+        set_oam(4, player_x.a + 8, player_y.a, tile_right, player_flags)
+
+        frame += 1
         nmi
 
 nmi game_nmi()
+    if ready
+        ppu_upload_oam_poll_pads(0)
+        ppu_upload_palette()
 
     ppu_reset_scroll(0, 0)
-    {PPUCTRL}(PPUCTRL_NMI_ON)
+    {PPUCTRL}(PPUCTRL_NMI_ON | PPUCTRL_SPR_8X16)
     {PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP)
