@@ -17,15 +17,6 @@ ct U[25] palette_initial = U[25](
     $0f // background color
 )
 
-ct U[] hidden_credit = U[] (
-    $c0, $c1, $c2, $0, // NES
-    $c3, $c9, $c4, $c5, $0, // PORT
-    $c6, $c7, $0, // BY
-    $c8, $c9, $c0, $c2, $c5, $c8, $ca, $c2, $c5, $0, // CONSTCAST
-    $cb, $cc, $cb, $cd // 2025
-)
-ct UU HIDDEN_CREDIT_POS = $2063
-
 data /rlz
     [] title_screen
         file(rlz, "title.nam")
@@ -35,10 +26,19 @@ vars /title
     UF sprite_y
     UU frame = 0
 
+ct U[] hidden_credit = U[] (
+    $c0, $c1, $c2, $0, // NES
+    $c3, $c9, $c4, $c5, $0, // PORT
+    $c6, $c7, $0, // BY
+    $c8, $c9, $c0, $c2, $c5, $c8, $ca, $c2, $c5, $0, // CONSTCAST
+    $cb, $cc, $cb, $cd // 2025
+)
+ct UU HIDDEN_CREDIT_POS = $2063
+ct U FAKE_SPRITE_ID = $43
+
 mode main()
     goto mode title(true) : preserves // nothing
-    //goto mode game()
-    : preserves
+    //goto mode game() : preserves
 
 nmi title_nmi()
     if ready
@@ -80,7 +80,7 @@ mode title(Bool scroll_logo)
         scroll = 0
 
     state(0)
-    set_oam(0, $50, sprite_y.a, $50, 0)
+    set_oam(0, $50, sprite_y.a, FAKE_SPRITE_ID, 0)
 
     // commented out to avoid one frame of logo visible at the bottom
     //{PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP)
@@ -98,7 +98,7 @@ mode title(Bool scroll_logo)
             hide_oam(0)
 
             // show the title screen text
-            palette[5] = $22
+            palette[5] = SCORE_BLUE
             palette[8] = WHITE
 
             // the "Press start button" is set to use palette 3 so make it
