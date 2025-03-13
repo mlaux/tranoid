@@ -24,6 +24,7 @@ ct U[] hidden_credit = U[] (
     $c8, $c9, $c0, $c2, $c5, $c8, $ca, $c2, $c5, $0, // CONSTCAST
     $cb, $cc, $cb, $cd // 2025
 )
+ct UU HIDDEN_CREDIT_POS = $2063
 
 data /rlz
     [] title_screen
@@ -41,6 +42,12 @@ nmi title_nmi()
     if ready
         ppu_upload_oam_poll_pads(0)
         ppu_upload_palette()
+
+        if pads[0].pressed & BUTTON_SELECT
+            ppu_reset_addr(HIDDEN_CREDIT_POS)
+            for U i = 0; i < len(hidden_credit); i += 1
+                {PPUDATA}(hidden_credit[i])
+
     ppu_reset_scroll(0, scroll.a)
 
     {PPUMASK}(PPUMASK_ON)
@@ -49,9 +56,6 @@ nmi title_nmi()
     if scroll != 0
         // wait until rendering hits the bottom of the logo
         ppu_await_status(PPUSTATUS_SPR_0)
-        // move sprite 0 one pixel down to stay in sync with logo
-        set_oam_y(0, sprite_y.a)
-        sprite_y += 0.5
         // turn off rendering to hide wrap around
         {PPUMASK}(0)
 
@@ -69,34 +73,43 @@ mode title(Bool scroll_logo)
     ppu_upload_rlz(@title_screen)
     if scroll_logo
         scroll = $4f
-        sprite_y = 2
+        sprite_y = 1
     else
         scroll = 0
 
-    ppu_reset_scroll(0, scroll.a)
 
     // avoid one frame of logo visible at the bottom
     //{PPUMASK}(PPUMASK_ON)
     {PPUCTRL}(PPUCTRL_NMI_ON)
 
     state(0)
-    hide_oam(0)
     set_oam(0, $50, sprite_y.a, $50, 0)
 
     while true
         if scroll != 0
             scroll -= 0.5
+            // move sprite 0 down to stay in sync with logo
+            sprite_y += 0.5
+            set_oam_y(0, sprite_y.a)
         else
-            palette[5] = $22
-            palette[8] = $30
+            // either done scrolling or didn't scroll in the first place
+            // make sure the sprite 0 isn't blocking anything
+            hide_oam(0)
 
-        frame += 1
-        if frame >= $200
-            goto mode attract()
-            : preserves
+            // show the title screen text
+            palette[5] = $22
+            palette[8] = WHITE
+
+            // the "Press start button" is set to use palette 3 so make it
+            // blink by toggling between white and black
+            if frame & 31 >= 16
+                palette[11] = WHITE
+            else
+                palette[11] = BLACK
 
         update_pads()
-        if pads[0].pressed & BUTTON_START
+        frame += 1
+        if frame >= $200 || (pads[0].pressed & BUTTON_START)
             goto mode attract()
             : preserves
 

@@ -108,12 +108,12 @@ mode attract()
                 attract_src_index = 0
                 attract_line_num += 1
                 attract_dst_addr = opening_line_starts[attract_line_num]
-                if attract_dst_addr == 0
-                    // all lines drawn
-                    attract_done_with_text = true
-                else
+                if attract_dst_addr != 0
                     // do this again with first char of next line
                     attract_line_char = opening_lines[attract_line_num][attract_src_index]
+                else
+                    // all lines drawn
+                    attract_done_with_text = true
         else
             delay += 1
             // is this if statement compiled improperly?
@@ -128,6 +128,12 @@ mode attract()
                 attract_done_with_text = false
                 attract_line_char = opening_lines[attract_line_num][attract_src_index]
                 upload_attract_gfx(attract_mode_scene)
+
+        // blink the press start text
+        if frame & 31 >= 16
+            palette[11] = WHITE
+        else
+            palette[11] = BLACK
 
         update_pads()
         if pads[0].pressed & BUTTON_START
