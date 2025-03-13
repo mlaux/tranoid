@@ -1,0 +1,15 @@
+ct U[] src = U[] ($1, $2, $3)
+
+vars
+    U[4] dest
+
+mode main()
+    for U k = 0; k < len(src); k += 1
+        dest[k + 1] = src[k]
+
+    // this compiles to:
+    // 8363  A9 01          LDA #$01
+    // 8365  8D 01 02       STA $0201
+    // 8368  8D 02 02       STA $0202
+    // 836B  A0 03          LDY #$03
+    // 836D  8C 03 02       STY $0203

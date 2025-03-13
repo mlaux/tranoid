@@ -1,9 +1,6 @@
 // Main gameplay mode
 
-//ct U[3] tran_palette = U[3] ($2c, $27, $30)
-// this does not work with a 'ct' array??
-// for U k = 0; k < len(tran_palette); k += 1
-//     palette[PALETTE_SPR + k] = tran_palette[k]
+// ct U[3] tran_palette = U[3] ($2c, $27, $30)
 
 ct U[] game_palette = U[] (
     $0f, $10, $30, // lane color 1
@@ -45,6 +42,19 @@ mode game()
     {PPUMASK}(0)
 
     state(0)
+
+    // this does not work with a 'ct' array??
+    // I think this is the same thing that was going on with the delays in
+    // attract mode
+    // for U k = 0; k < len(tran_palette); k += 1
+    //     palette[PALETTE_SPR + k] = tran_palette[k]
+    // compiles to:
+    // 8A2C  A9 2C          LDA #$2C
+    // 8A2E  8D 0C 03       STA $030C
+    // 8A31  8D 0D 03       STA $030D
+    // 8A34  A2 30          LDX #$30
+    // 8A36  8E 0E 03       STX $030E
+    // 8A39  20 C0 8C       JSR ppu_upload_palette@0_0
 
     palette = game_palette
     ppu_upload_palette()
