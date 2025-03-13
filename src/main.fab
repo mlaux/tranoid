@@ -109,7 +109,7 @@ mode title(Bool scroll_logo)
                 palette[11] = BLACK
 
         update_pads()
-        if pads[0].pressed & BUTTON_START
+        if scroll == 0 && pads[0].pressed & BUTTON_START
             goto mode game()
             : preserves
 

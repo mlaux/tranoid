@@ -94,6 +94,7 @@ mode attract()
     // this freezes on the first screen if i use a byte here
     // instead of a short... no idea why, even if it was a range thing
     // it would wrap around eventually right?
+    // ONLY if the delays[] is compile time
     UU delay = 0
 
     hide_oam(0)

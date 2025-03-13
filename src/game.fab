@@ -24,7 +24,6 @@ ct U MAX_X = $f0
 ct U MIN_Y = $30
 ct U MAX_Y = $b0
 
-
 ct U TILE_LEFT_RUNNING = $60
 ct U TILE_RIGHT_RUNNING = $62
 ct U TILE_LEFT_STANDING = $64
