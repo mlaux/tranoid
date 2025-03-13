@@ -37,6 +37,8 @@ vars /title
 
 mode main()
     goto mode title(true) : preserves // nothing
+    //goto mode game()
+    : preserves
 
 nmi title_nmi()
     if ready
@@ -50,7 +52,7 @@ nmi title_nmi()
 
     ppu_reset_scroll(0, scroll.a)
 
-    {PPUMASK}(PPUMASK_ON)
+    {PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP)
     {PPUCTRL}(PPUCTRL_NMI_ON)
 
     if scroll != 0
@@ -77,13 +79,12 @@ mode title(Bool scroll_logo)
     else
         scroll = 0
 
-
-    // avoid one frame of logo visible at the bottom
-    //{PPUMASK}(PPUMASK_ON)
-    {PPUCTRL}(PPUCTRL_NMI_ON)
-
     state(0)
     set_oam(0, $50, sprite_y.a, $50, 0)
+
+    // commented out to avoid one frame of logo visible at the bottom
+    //{PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP)
+    {PPUCTRL}(PPUCTRL_NMI_ON)
 
     while true
         if scroll != 0
@@ -108,14 +109,16 @@ mode title(Bool scroll_logo)
                 palette[11] = BLACK
 
         update_pads()
+        if pads[0].pressed & BUTTON_START
+            goto mode game()
+            : preserves
+
         frame += 1
-        if frame >= $200 || (pads[0].pressed & BUTTON_START)
+        if frame >= $200
             goto mode attract()
             : preserves
 
         nmi
-
-mode game()
 
 chrrom
     file(raw, "title.chr")

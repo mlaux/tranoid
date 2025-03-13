@@ -56,8 +56,8 @@ nmi attract_nmi()
     if ready
         ppu_upload_oam_poll_pads(0)
         ppu_upload_palette()
+        {PPUSTATUS}()
         if !attract_done_with_text && frame & 3 == 0
-            {PPUSTATUS}()
             {PPUADDR}(attract_dst_addr.b)
             {PPUADDR}(attract_dst_addr.a)
             {PPUDATA}(attract_line_char)
@@ -66,8 +66,8 @@ nmi attract_nmi()
             attract_dst_addr += 1
 
     ppu_reset_scroll(0, 0)
-    {PPUMASK}(PPUMASK_ON)
     {PPUCTRL}(PPUCTRL_NMI_ON)
+    {PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP)
 
 fn upload_attract_gfx(U num)
     {PPUCTRL}(0)
@@ -77,13 +77,13 @@ fn upload_attract_gfx(U num)
     palette[0] = opening_palettes1[num]
     palette[1] = opening_palettes2[num]
     palette[2] = opening_palettes3[num]
-    palette[8] = $30 // in case they hit start before the title screen ends
+    palette[8] = WHITE // in case they hit start before the title screen ends
     ppu_upload_palette()
 
     ppu_reset_addr($2000)
     ppu_upload_rlz(opening_gfx[num])
     ppu_reset_scroll(0, 0)
-    
+
     {PPUCTRL}(PPUCTRL_NMI_ON)
 
 mode attract()

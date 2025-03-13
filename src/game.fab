@@ -1,0 +1,24 @@
+// Main gameplay mode
+
+data /rlz
+    [] game_screen
+        file(rlz, "game.nam")
+
+mode game()
+: nmi game_nmi
+    {PPUCTRL}(0)
+    {PPUMASK}(0)
+    state(0)
+    palette = example_palette
+    ppu_upload_palette()
+    ppu_reset_addr($2000)
+    ppu_upload_rlz(@game_screen)
+    {PPUCTRL}(PPUCTRL_NMI_ON)
+    while true
+        nmi
+
+nmi game_nmi()
+
+    ppu_reset_scroll(0, 0)
+    {PPUCTRL}(PPUCTRL_NMI_ON)
+    {PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP)
