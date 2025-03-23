@@ -60,6 +60,9 @@ nmi title_nmi()
         ppu_await_status(PPUSTATUS_SPR_0)
         // turn off rendering to hide wrap around
         {PPUMASK}(0)
+        // alternatively... set horiz scroll to blank area.
+        // not sure which is better
+        // ppu_reset_scroll(216, scroll.a)
 
 mode title(Bool scroll_logo)
 : nmi title_nmi
