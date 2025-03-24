@@ -32,7 +32,7 @@ data /strings
 
 ct UU[] opening_line_starts = UU[] ($2203, $2243, 0, $2201, $2246, $228b, 0, $2206, $2244, $2285, $22cc, 0)
 
-ct U[] delays = U[] ($20, $30, $40)
+ct U[] delays = U[] ($40, $40, $40)
 
 ct CC/rlz[] opening_gfx = CC/rlz[] (@opening_1, @opening_2, @opening_3)
 

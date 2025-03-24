@@ -37,8 +37,8 @@ ct UU HIDDEN_CREDIT_POS = $2063
 ct U FAKE_SPRITE_ID = $43
 
 mode main()
-    goto mode title(true) : preserves // nothing
-    //goto mode game() : preserves
+    //goto mode title(true) : preserves // nothing
+    goto mode game() : preserves
 
 nmi title_nmi()
     if ready

@@ -18,8 +18,8 @@ ct U[] game_palette = U[] (
 
 ct U MIN_X = $10
 ct U MAX_X = $f0
-ct U MIN_Y = $30
-ct U MAX_Y = $b0
+ct U MIN_Y = $38
+ct U MAX_Y = $b8
 
 ct U TILE_LEFT_RUNNING = $60
 ct U TILE_RIGHT_RUNNING = $62
@@ -30,8 +30,10 @@ ct U START_OFFSET = $18
 
 ct U TRAN_ICON = $f7
 ct U EMPTY_TOP_BORDER = $51
+ct U DEBUG_INDICATOR = $ce
 
 vars /game
+    Bool dead = false
     U active_nt = 0
     UF scroll_x = 0
     U next_column = START_OFFSET
@@ -56,6 +58,37 @@ nmi game_nmi()
     if ready
         ppu_upload_oam_poll_pads(0)
         ppu_upload_palette()
+
+    // https://github.com/pubby/nesfab/issues/35
+    // workaround: OR with $100 first
+    UU use_x = (UU(scroll_x.a) | $0100) + UU(player_x.a)
+    use_x -= $100
+    if active_nt != 0
+        use_x += $100
+    if use_x > $1ff
+        use_x -= $200
+
+    // log_3(@"scroll: %04x, player: %04x, sum: %04x"ascii, UU(scroll_x.a), UU(player_x.a), use_x)
+
+    UU use_addr = $2000
+    if use_x >= $100
+        use_addr = $2400
+
+    UU xy_addr = use_addr + (UU(player_y.a >> 3) << 5) + (use_x >> 3)
+    if use_x >= $100
+        xy_addr -= $20 // why?
+    ppu_reset_addr(xy_addr)
+    {PPUDATA}()
+    if {PPUDATA}() == TRAN_ICON
+        dead = true
+    ppu_reset_addr(xy_addr + $20)
+    {PPUDATA}()
+    if {PPUDATA}() == TRAN_ICON
+        dead = true
+    // ppu_reset_addr(xy_addr)
+    // {PPUDATA}(DEBUG_INDICATOR)
+    // ppu_reset_addr(xy_addr + $20)
+    // {PPUDATA}(DEBUG_INDICATOR)
 
     if frame & 7 == 0
         load_column()
@@ -145,7 +178,7 @@ mode game()
     
     {PPUCTRL}(PPUCTRL_NMI_ON)
     
-    while true
+    while !dead
         update_pads()
 
         U player_moving = pads[0].held & BUTTON_DPAD
@@ -170,7 +203,7 @@ mode game()
 
         U tile_left = TILE_LEFT_STANDING
         U tile_right = TILE_RIGHT_STANDING
-        if player_moving && frame & 15 >= 8
+        if frame & 15 >= 8 // && player_moving
             tile_left = TILE_LEFT_RUNNING
             tile_right = TILE_RIGHT_RUNNING
 
@@ -180,8 +213,8 @@ mode game()
             tile_left = tile_right
             tile_right = temp
 
-        set_oam(0, player_x.a, player_y.a, tile_left, player_flags)
-        set_oam(4, player_x.a + 8, player_y.a, tile_right, player_flags)
+        set_oam(0, player_x.a - 4, player_y.a - 4, tile_left, player_flags)
+        set_oam(4, player_x.a + 4, player_y.a - 4, tile_right, player_flags)
 
         scroll_x += 1
         if(scroll_x == 0)
@@ -190,3 +223,6 @@ mode game()
         //{PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP | PPUMASK_EMPHASIZE_R | PPUMASK_EMPHASIZE_G | PPUMASK_EMPHASIZE_B)
         frame += 1
         nmi
+
+    
+    goto mode title(true) : preserves
