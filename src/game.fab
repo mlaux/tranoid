@@ -38,6 +38,7 @@ ct U DEBUG_INDICATOR = $ce
 
 vars /game
     Bool dead = false
+    Bool won = false
     U active_nt = 0
     UF scroll_x = 0
     U next_column = START_OFFSET
@@ -115,10 +116,9 @@ fn emit_tile(U k)
 
 fn load_column()
     if chart_offset == len(chart)
-        // you win
-        //dead = true
+        won = true
         return
-        // goto mode title(true) : preserves
+
     {PPUCTRL}(PPUCTRL_VRAM_32_DOWN)
 
     {PPUSTATUS}()
@@ -182,6 +182,8 @@ mode game()
     {PPUCTRL}(PPUCTRL_NMI_ON)
     
     while !dead
+        if won
+            goto mode title(true) : preserves
         update_pads()
 
         U player_moving = pads[0].held & BUTTON_DPAD
@@ -230,6 +232,5 @@ mode game()
         //{PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP | PPUMASK_EMPHASIZE_R | PPUMASK_EMPHASIZE_G | PPUMASK_EMPHASIZE_B)
         frame += 1
         nmi
-
     
-    goto mode title(true) : preserves
+    goto mode title(false) : preserves
