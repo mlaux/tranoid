@@ -46,6 +46,8 @@ vars /game
     UF player_x = $78
     UF player_y = $70
     U anim_ctr = 0
+    CCC/charts use_chart = @chart // @another
+
     // U[3] tran_palette = U[3] ($2c, $27, $30)
 
 data /rlz
@@ -107,7 +109,7 @@ nmi game_nmi()
 
 fn emit_tile(U k)
 : +inline
-    if (@chart{chart_offset} >> k) & 1
+    if (use_chart{chart_offset} >> k) & 1
         {PPUDATA}(ENEMY_ICON)
         {PPUDATA}(ENEMY_LEGS)
     else
@@ -125,7 +127,7 @@ fn load_column()
     {PPUADDR}(tile_ppuaddr_table()[next_column].b)
     {PPUADDR}(tile_ppuaddr_table()[next_column].a)
     {PPUDATA}(EMPTY_TOP_BORDER)
-    if (@chart{chart_offset} >> 7) & 1
+    if (use_chart{chart_offset} >> 7) & 1
         {PPUDATA}(ENEMY_ICON_SCRATCH)
         {PPUDATA}(ENEMY_LEGS)
     else
