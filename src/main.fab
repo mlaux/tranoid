@@ -124,8 +124,8 @@ mode title(Bool scroll_logo)
         nmi
 
 chrrom
-    file(raw, "title.chr")
-    file(raw, "title.chr")
+    file(fmt, "title.chr")
+    file(fmt, "title.chr")
     file(fmt, "opening1/opening1.chr")
     file(fmt, "opening1/opening1.chr")
     file(fmt, "opening2/opening2.chr")

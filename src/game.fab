@@ -3,9 +3,9 @@
 // ct U[3] tran_palette = U[3] ($2c, $27, $30)
 
 ct U[] game_palette = U[] (
-    $0f, $10, $30, // lane color 1
-    $2d, $10, $30, // lane color 2
-    $0f, $0f, $0f, 
+    $0f, $10, $11, // black keys lanes
+    $2d, $10, $30, // white keys lanes
+    $0f, $10, $16, // scratch lane
     $0f, $0f, $0f, 
 
     $2c, $27, $30, // tran color
@@ -26,10 +26,14 @@ ct U TILE_RIGHT_RUNNING = $62
 ct U TILE_LEFT_STANDING = $64
 ct U TILE_RIGHT_STANDING = $66
 ct U WIDTH_IN_TILES = $40
-ct U START_OFFSET = $18
+ct U START_OFFSET = $1f
 
 ct U TRAN_ICON = $f7
+ct U ENEMY_ICON = $f8
+ct U ENEMY_ICON_SCRATCH = $f9
+ct U ENEMY_LEGS = $fa
 ct U EMPTY_TOP_BORDER = $51
+ct U EMPTY_LANE = $54
 ct U DEBUG_INDICATOR = $ce
 
 vars /game
@@ -37,9 +41,10 @@ vars /game
     U active_nt = 0
     UF scroll_x = 0
     U next_column = START_OFFSET
-    U chart_offset = 0
+    UU chart_offset = 0
     UF player_x = $78
     UF player_y = $70
+    U anim_ctr = 0
     // U[3] tran_palette = U[3] ($2c, $27, $30)
 
 data /rlz
@@ -79,18 +84,20 @@ nmi game_nmi()
         xy_addr -= $20 // why?
     ppu_reset_addr(xy_addr)
     {PPUDATA}()
-    if {PPUDATA}() == TRAN_ICON
+    UU tile_below = {PPUDATA}()
+    if tile_below == ENEMY_ICON || tile_below == ENEMY_ICON_SCRATCH || tile_below == ENEMY_LEGS
         dead = true
     ppu_reset_addr(xy_addr + $20)
     {PPUDATA}()
-    if {PPUDATA}() == TRAN_ICON
+    tile_below = {PPUDATA}()
+    if tile_below == ENEMY_ICON || tile_below == ENEMY_ICON_SCRATCH || tile_below == ENEMY_LEGS
         dead = true
     // ppu_reset_addr(xy_addr)
     // {PPUDATA}(DEBUG_INDICATOR)
     // ppu_reset_addr(xy_addr + $20)
     // {PPUDATA}(DEBUG_INDICATOR)
 
-    if frame & 7 == 0
+    if frame & 3 == 0
         load_column()
 
     ppu_reset_scroll(scroll_x.a, 0) // 0, 0)
@@ -99,15 +106,18 @@ nmi game_nmi()
 
 fn emit_tile(U k)
 : +inline
-    if (@chart[chart_offset] >> k) & 1
-        {PPUDATA}(TRAN_ICON)
+    if (@chart{chart_offset} >> k) & 1
+        {PPUDATA}(ENEMY_ICON)
+        {PPUDATA}(ENEMY_LEGS)
     else
         {PPUDATA}(EMPTY_TOP_BORDER)
+        {PPUDATA}(EMPTY_LANE)
 
 fn load_column()
     if chart_offset == len(chart)
-        return
         // you win
+        //dead = true
+        return
         // goto mode title(true) : preserves
     {PPUCTRL}(PPUCTRL_VRAM_32_DOWN)
 
@@ -115,27 +125,20 @@ fn load_column()
     {PPUADDR}(tile_ppuaddr_table()[next_column].b)
     {PPUADDR}(tile_ppuaddr_table()[next_column].a)
     {PPUDATA}(EMPTY_TOP_BORDER)
-    if (@chart[chart_offset] >> 7) & 1
-        {PPUDATA}(TRAN_ICON)
+    if (@chart{chart_offset} >> 7) & 1
+        {PPUDATA}(ENEMY_ICON_SCRATCH)
+        {PPUDATA}(ENEMY_LEGS)
     else
-        {PPUDATA}($54)
-
-    {PPUDATA}($54)
+        {PPUDATA}(EMPTY_LANE)
+        {PPUDATA}(EMPTY_LANE)
     {PPUDATA}($54)
     emit_tile(6)
-    {PPUDATA}($54)
     emit_tile(5)
-    {PPUDATA}($54)
     emit_tile(4)
-    {PPUDATA}($54)
     emit_tile(3)
-    {PPUDATA}($54)
     emit_tile(2)
-    {PPUDATA}($54)
     emit_tile(1)
-    {PPUDATA}($54)
     emit_tile(0)
-    {PPUDATA}($54)
     {PPUDATA}(EMPTY_TOP_BORDER)
 
     next_column += 1
@@ -203,7 +206,7 @@ mode game()
 
         U tile_left = TILE_LEFT_STANDING
         U tile_right = TILE_RIGHT_STANDING
-        if frame & 15 >= 8 // && player_moving
+        if anim_ctr >= 6 // && player_moving
             tile_left = TILE_LEFT_RUNNING
             tile_right = TILE_RIGHT_RUNNING
 
@@ -216,9 +219,13 @@ mode game()
         set_oam(0, player_x.a - 4, player_y.a - 4, tile_left, player_flags)
         set_oam(4, player_x.a + 4, player_y.a - 4, tile_right, player_flags)
 
-        scroll_x += 1
+        scroll_x += 2
         if(scroll_x == 0)
             active_nt ^= PPUCTRL_NT_2400
+
+        anim_ctr += 1
+        if anim_ctr >= 12
+            anim_ctr = 0
 
         //{PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP | PPUMASK_EMPHASIZE_R | PPUMASK_EMPHASIZE_G | PPUMASK_EMPHASIZE_B)
         frame += 1
