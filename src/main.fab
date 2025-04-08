@@ -1,12 +1,12 @@
 // Entry point and title screen
 
-charmap("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ.,:?!\"'/()& \0", '\0', $d0)
+charmap(" 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ.,:?!\"'/()&\0", '\0', $cf)
 : stows /strings
 
 ct U[25] palette_initial = U[25](
     $2c, $27, $30,
     $0f, $0f, $0f, // make text black originally
-    $0f, $0f, $0f,
+    $1c, $2c, $0f,
     $0f, $0f, $0f,
 
     $0f, $0f, $0f,
@@ -40,6 +40,16 @@ ct UU PLAYER_SELECT_POS_1P = $226a
 ct UU PLAYER_SELECT_POS_2P = $22aa
 ct U FAKE_SPRITE_ID = $43
 
+ct U FROG_TOP_LEFT = $50
+ct U FROG_TOP_RIGHT = $51
+ct U FROG_BOTTOM_LEFT = $60
+ct U FROG_BOTTOM_RIGHT = $61
+
+ct UU FROG_DEST_TOP_LEFT = $2342
+ct UU FROG_DEST_TOP_RIGHT = $2343
+ct UU FROG_DEST_BOTTOM_LEFT = $2362
+ct UU FROG_DEST_BOTTOM_RIGHT = $2363
+
 mode main()
     //goto mode title(true) : preserves // nothing
     goto mode game(false) : preserves
@@ -49,6 +59,26 @@ fn draw_hidden_credit()
     ppu_reset_addr(HIDDEN_CREDIT_POS)
     for U i = 0; i < len(hidden_credit); i += 1
         {PPUDATA}(hidden_credit[i])
+
+fn draw_5key_frog_icon(Bool show)
+    if show
+        ppu_reset_addr(FROG_DEST_TOP_LEFT)
+        {PPUDATA}(FROG_TOP_LEFT)
+        ppu_set_addr(FROG_DEST_TOP_RIGHT)
+        {PPUDATA}(FROG_TOP_RIGHT)
+        ppu_set_addr(FROG_DEST_BOTTOM_LEFT)
+        {PPUDATA}(FROG_BOTTOM_LEFT)
+        ppu_set_addr(FROG_DEST_BOTTOM_RIGHT)
+        {PPUDATA}(FROG_BOTTOM_RIGHT)
+    else
+        ppu_reset_addr(FROG_DEST_TOP_LEFT)
+        {PPUDATA}(0)
+        ppu_set_addr(FROG_DEST_TOP_RIGHT)
+        {PPUDATA}(0)
+        ppu_set_addr(FROG_DEST_BOTTOM_LEFT)
+        {PPUDATA}(0)
+        ppu_set_addr(FROG_DEST_BOTTOM_RIGHT)
+        {PPUDATA}(0)
 
 fn draw_player_icon()
 : +inline
@@ -70,6 +100,8 @@ nmi title_nmi()
 
         if pads[0].pressed & BUTTON_SELECT
             draw_hidden_credit()
+
+        draw_5key_frog_icon(pads[0].held & BUTTON_SELECT)
         draw_player_icon()
 
     ppu_reset_scroll(0, scroll.a)
