@@ -107,6 +107,8 @@ nmi game_nmi()
     {PPUCTRL}(PPUCTRL_NMI_ON | PPUCTRL_SPR_8X16 | active_nt)
     {PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP)
 
+    puf.process(PUF_DEFAULT)
+
 fn emit_tile(U k)
 : +inline
     if (use_chart{chart_offset} >> k) & 1
@@ -188,9 +190,11 @@ mode game(Bool another_mode)
     
     {PPUCTRL}(PPUCTRL_NMI_ON)
     
-    while !dead
+    while true
         if won
             goto mode title(true) : preserves
+        if dead
+            goto mode title(false) : preserves
         update_pads()
 
         U player_moving = pads[0].held & BUTTON_DPAD
@@ -242,5 +246,3 @@ mode game(Bool another_mode)
         //{PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP | PPUMASK_EMPHASIZE_R | PPUMASK_EMPHASIZE_G | PPUMASK_EMPHASIZE_B)
         frame += 1
         nmi
-    
-    goto mode title(false) : preserves

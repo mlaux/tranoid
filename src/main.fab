@@ -50,9 +50,14 @@ ct UU FROG_DEST_TOP_RIGHT = $2343
 ct UU FROG_DEST_BOTTOM_LEFT = $2362
 ct UU FROG_DEST_BOTTOM_RIGHT = $2363
 
+audio(puf1_music, "danger_streets.txt")
+audio(puf1_sfx)
+
 mode main()
-    //goto mode title(true) : preserves // nothing
-    goto mode game(false) : preserves
+    puf.init(system)
+    puf.play_track(0)
+    goto mode title(true) : preserves
+    //goto mode game(false) : preserves
 
 fn draw_hidden_credit()
 : +inline
@@ -117,6 +122,7 @@ nmi title_nmi()
         // alternatively... set horiz scroll to blank area.
         // not sure which is better
         // ppu_reset_scroll(216, scroll.a)
+    puf.process(PUF_DEFAULT)
 
 mode title(Bool scroll_logo)
 : nmi title_nmi

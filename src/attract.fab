@@ -69,6 +69,8 @@ nmi attract_nmi()
     {PPUCTRL}(PPUCTRL_NMI_ON)
     {PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP)
 
+    puf.process(PUF_DEFAULT)
+
 fn upload_attract_gfx(U num)
     {PPUCTRL}(0)
     {PPUMASK}(0)
