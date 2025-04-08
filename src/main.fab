@@ -25,6 +25,7 @@ vars /title
     UF scroll
     UF sprite_y
     UU frame = 0
+    Bool two_player = false
 
 ct U[] hidden_credit = U[] (
     $c0, $c1, $c2, $0, // NES
@@ -34,11 +35,33 @@ ct U[] hidden_credit = U[] (
     $cb, $cc, $cb, $cd // 2025
 )
 ct UU HIDDEN_CREDIT_POS = $2063
+ct U PLAYER_SELECT_ICON = $f7
+ct UU PLAYER_SELECT_POS_1P = $226a
+ct UU PLAYER_SELECT_POS_2P = $22aa
 ct U FAKE_SPRITE_ID = $43
 
 mode main()
     //goto mode title(true) : preserves // nothing
     goto mode game(false) : preserves
+
+fn draw_hidden_credit()
+: +inline
+    ppu_reset_addr(HIDDEN_CREDIT_POS)
+    for U i = 0; i < len(hidden_credit); i += 1
+        {PPUDATA}(hidden_credit[i])
+
+fn draw_player_icon()
+: +inline
+    if two_player
+        ppu_reset_addr(PLAYER_SELECT_POS_1P)
+        {PPUDATA}(0)
+        ppu_reset_addr(PLAYER_SELECT_POS_2P)
+        {PPUDATA}(PLAYER_SELECT_ICON)
+    else
+        ppu_reset_addr(PLAYER_SELECT_POS_1P)
+        {PPUDATA}(PLAYER_SELECT_ICON)
+        ppu_reset_addr(PLAYER_SELECT_POS_2P)
+        {PPUDATA}(0)
 
 nmi title_nmi()
     if ready
@@ -46,9 +69,8 @@ nmi title_nmi()
         ppu_upload_palette()
 
         if pads[0].pressed & BUTTON_SELECT
-            ppu_reset_addr(HIDDEN_CREDIT_POS)
-            for U i = 0; i < len(hidden_credit); i += 1
-                {PPUDATA}(hidden_credit[i])
+            draw_hidden_credit()
+        draw_player_icon()
 
     ppu_reset_scroll(0, scroll.a)
 
@@ -112,6 +134,10 @@ mode title(Bool scroll_logo)
                 palette[11] = BLACK
 
         update_pads()
+
+        if pads[0].pressed & BUTTON_DPAD
+            two_player = !two_player
+
         Bool another_mode = pads[0].held & BUTTON_SELECT
         if scroll == 0 && pads[0].pressed & BUTTON_START
             goto mode game(another_mode)
