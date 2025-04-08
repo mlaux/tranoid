@@ -46,7 +46,7 @@ vars /game
     UF player_x = $78
     UF player_y = $70
     U anim_ctr = 0
-    CCC/charts use_chart = @chart // @another
+    CCC/charts use_chart
 
     // U[3] tran_palette = U[3] ($2c, $27, $30)
 
@@ -148,12 +148,17 @@ fn load_column()
         next_column = 0
     chart_offset += 1
 
-mode game()
+mode game(Bool another_mode)
 : nmi game_nmi
     {PPUCTRL}(0)
     {PPUMASK}(0)
 
     state(0)
+
+    if another_mode
+        use_chart = @another
+    else
+        use_chart = @chart
 
     // this does not work with a 'ct' array??
     // I think this is the same thing that was going on with the delays in

@@ -38,7 +38,7 @@ ct U FAKE_SPRITE_ID = $43
 
 mode main()
     //goto mode title(true) : preserves // nothing
-    goto mode game() : preserves
+    goto mode game(false) : preserves
 
 nmi title_nmi()
     if ready
@@ -112,8 +112,9 @@ mode title(Bool scroll_logo)
                 palette[11] = BLACK
 
         update_pads()
+        Bool another_mode = pads[0].held & BUTTON_SELECT
         if scroll == 0 && pads[0].pressed & BUTTON_START
-            goto mode game()
+            goto mode game(another_mode)
             : preserves
 
         frame += 1
@@ -125,6 +126,7 @@ mode title(Bool scroll_logo)
 
 chrrom
     file(fmt, "title.chr")
+    // odd ones actually do not matter because 16x16 sprites always get their data from $0
     file(fmt, "title.chr")
     file(fmt, "opening1/opening1.chr")
     file(fmt, "title.chr")
