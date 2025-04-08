@@ -21,10 +21,10 @@ ct U MAX_X = $f0
 ct U MIN_Y = $38
 ct U MAX_Y = $b8
 
-ct U TILE_LEFT_RUNNING = $60
-ct U TILE_RIGHT_RUNNING = $62
-ct U TILE_LEFT_STANDING = $64
-ct U TILE_RIGHT_STANDING = $66
+ct U TILE_LEFT_RUNNING = $b0
+ct U TILE_RIGHT_RUNNING = $b2
+ct U TILE_LEFT_STANDING = $b4
+ct U TILE_RIGHT_STANDING = $b6
 ct U WIDTH_IN_TILES = $40
 ct U START_OFFSET = $1f
 
@@ -32,8 +32,8 @@ ct U TRAN_ICON = $f7
 ct U ENEMY_ICON = $f8
 ct U ENEMY_ICON_SCRATCH = $f9
 ct U ENEMY_LEGS = $fa
-ct U EMPTY_TOP_BORDER = $51
-ct U EMPTY_LANE = $54
+ct U EMPTY_TOP_BORDER = $fc
+ct U EMPTY_LANE = $ff
 ct U DEBUG_INDICATOR = $ce
 
 vars /game
@@ -133,7 +133,7 @@ fn load_column()
     else
         {PPUDATA}(EMPTY_LANE)
         {PPUDATA}(EMPTY_LANE)
-    {PPUDATA}($54)
+    {PPUDATA}($00)
     emit_tile(6)
     emit_tile(5)
     emit_tile(4)
@@ -211,8 +211,11 @@ mode game()
         U tile_left = TILE_LEFT_STANDING
         U tile_right = TILE_RIGHT_STANDING
         if anim_ctr >= 6 // && player_moving
+            state(3)
             tile_left = TILE_LEFT_RUNNING
             tile_right = TILE_RIGHT_RUNNING
+        else
+            state(0)
 
         // need to swap the tile IDs not just the tile contents
         if player_flags
