@@ -97,7 +97,7 @@ nmi game_nmi()
 
     // check for collision with enemy
     if check_tile_under_player(xy_addr) || check_tile_under_player(xy_addr + $20)
-        //dead = true
+        dead = true
 
     // ppu_reset_addr(xy_addr)
     // {PPUDATA}(DEBUG_INDICATOR)
@@ -204,6 +204,7 @@ mode game(Bool another_mode)
             goto mode title(true) : preserves
         if dead
             puf.stop(0)
+            puf.play_sfx(0)
             goto mode title(false) : preserves
 
         // hardcoded for sync
