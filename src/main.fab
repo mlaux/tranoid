@@ -50,14 +50,13 @@ ct UU FROG_DEST_TOP_RIGHT = $2343
 ct UU FROG_DEST_BOTTOM_LEFT = $2362
 ct UU FROG_DEST_BOTTOM_RIGHT = $2363
 
-audio(puf1_music, "danger_streets.txt")
+audio(puf1_music, "testexport.txt")
 audio(puf1_sfx)
 
 mode main()
     puf.init(system)
-    puf.play_track(0)
-    goto mode title(true) : preserves
-    //goto mode game(false) : preserves
+    //goto mode title(true) : preserves
+    goto mode game(false) : preserves
 
 fn draw_hidden_credit()
 : +inline

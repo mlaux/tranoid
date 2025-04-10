@@ -39,8 +39,10 @@ ct U DEBUG_INDICATOR = $ce
 vars /game
     Bool dead = false
     Bool won = false
+    Bool music_started = false
     U active_nt = 0
     UF scroll_x = 0
+    UF last_scroll = 0
     U next_column = START_OFFSET
     UU chart_offset = 0
     UF player_x = $78
@@ -100,7 +102,9 @@ nmi game_nmi()
     // ppu_reset_addr(xy_addr + $20)
     // {PPUDATA}(DEBUG_INDICATOR)
 
-    if frame & 3 == 0
+    // there is probably an easier way to do this
+    Bool crossed_tile_boundary = last_scroll.a & $f8 != scroll_x.a & $f8
+    if crossed_tile_boundary
         load_column()
 
     ppu_reset_scroll(scroll_x.a, 0) // 0, 0)
@@ -183,7 +187,7 @@ mode game(Bool another_mode)
     ppu_reset_addr($2400)
     ppu_upload_rlz(@game_screen)
 
-    for U k = 0; k < 10; k += 1
+    for U k = 0; k < 8; k += 1
         load_column()
 
     hide_oam(0)
@@ -195,6 +199,11 @@ mode game(Bool another_mode)
             goto mode title(true) : preserves
         if dead
             goto mode title(false) : preserves
+
+        // hardcoded for sync
+        if next_column == $6 && !music_started
+            puf.play_track(0)
+            music_started = true
         update_pads()
 
         U player_moving = pads[0].held & BUTTON_DPAD
@@ -235,8 +244,9 @@ mode game(Bool another_mode)
         set_oam(0, player_x.a - 4, player_y.a - 4, tile_left, player_flags)
         set_oam(4, player_x.a + 4, player_y.a - 4, tile_right, player_flags)
 
-        scroll_x += 2
-        if(scroll_x == 0)
+        last_scroll = scroll_x
+        // 1.6 seems to be synced with the song. this is just hardcoded
+        if(scroll_x += 1.6) // evaluates to true if it overflowed
             active_nt ^= PPUCTRL_NT_2400
 
         anim_ctr += 1
