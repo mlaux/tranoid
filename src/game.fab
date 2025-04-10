@@ -24,7 +24,7 @@ ct U TILE_RIGHT_RUNNING = $b2
 ct U TILE_LEFT_STANDING = $b4
 ct U TILE_RIGHT_STANDING = $b6
 ct U WIDTH_IN_TILES = $40
-ct U START_OFFSET = $1f
+ct U START_OFFSET = $10
 
 ct U TRAN_ICON = $f7
 ct U ENEMY_ICON = $f8
@@ -97,7 +97,7 @@ nmi game_nmi()
 
     // check for collision with enemy
     if check_tile_under_player(xy_addr) || check_tile_under_player(xy_addr + $20)
-        dead = true
+        //dead = true
 
     // ppu_reset_addr(xy_addr)
     // {PPUDATA}(DEBUG_INDICATOR)
@@ -189,22 +189,25 @@ mode game(Bool another_mode)
     ppu_reset_addr($2400)
     ppu_upload_rlz(@game_screen)
 
-    for U k = 0; k < 8; k += 1
+    for U k = 0; k < 24; k += 1
         load_column()
 
     hide_oam(0)
 
     {PPUCTRL}(PPUCTRL_NMI_ON)
 
+    puf.play_track(0)
+
     while true
         if won
+            puf.stop(0)
             goto mode title(true) : preserves
         if dead
+            puf.stop(0)
             goto mode title(false) : preserves
 
         // hardcoded for sync
         if next_column == $6 && !music_started
-            puf.play_track(0)
             music_started = true
         update_pads()
 
