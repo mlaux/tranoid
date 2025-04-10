@@ -1,7 +1,5 @@
 // Main gameplay mode
 
-// ct U[3] tran_palette = U[3] ($2c, $27, $30)
-
 ct U[] game_palette = U[] (
     $0f, $10, $11, // black keys lanes
     $2d, $10, $30, // white keys lanes
@@ -50,8 +48,6 @@ vars /game
     U anim_ctr = 0
     CCC/charts use_chart
 
-    // U[3] tran_palette = U[3] ($2c, $27, $30)
-
 data /rlz
     [] game_screen
         file(rlz, "game.nam")
@@ -64,11 +60,20 @@ ct fn tile_ppuaddr_table() UU[WIDTH_IN_TILES]
         ret[i + 32] = $24c0 + UU(i)
     return ret
 
+fn check_tile_under_player(UU addr) Bool
+: +inline
+    ppu_reset_addr(addr)
+    {PPUDATA}()
+    UU tile_below = {PPUDATA}()
+    return tile_below == ENEMY_ICON || tile_below == ENEMY_ICON_SCRATCH || tile_below == ENEMY_LEGS
+
 nmi game_nmi()
     if ready
         ppu_upload_oam_poll_pads(0)
         ppu_upload_palette()
 
+    // get player X position as a value from 0 to ff which is a pixel offset
+    // in the current nametable
     // https://github.com/pubby/nesfab/issues/35
     // workaround: OR with $100 first
     UU use_x = (UU(scroll_x.a) | $0100) + UU(player_x.a)
@@ -78,36 +83,33 @@ nmi game_nmi()
     if use_x > $1ff
         use_x -= $200
 
+    // leaving in as an example of how to use the logging
     // log_3(@"scroll: %04x, player: %04x, sum: %04x"ascii, UU(scroll_x.a), UU(player_x.a), use_x)
 
-    UU use_addr = $2000
+    UU nt_base = $2000
     if use_x >= $100
-        use_addr = $2400
+        nt_base = $2400
 
-    UU xy_addr = use_addr + (UU(player_y.a >> 3) << 5) + (use_x >> 3)
+    // convert from pixel coordinates to tile address
+    UU xy_addr = nt_base + (UU(player_y.a >> 3) << 5) + (use_x >> 3)
     if use_x >= $100
         xy_addr -= $20 // why?
-    ppu_reset_addr(xy_addr)
-    {PPUDATA}()
-    UU tile_below = {PPUDATA}()
-    if tile_below == ENEMY_ICON || tile_below == ENEMY_ICON_SCRATCH || tile_below == ENEMY_LEGS
+
+    // check for collision with enemy
+    if check_tile_under_player(xy_addr) || check_tile_under_player(xy_addr + $20)
         dead = true
-    ppu_reset_addr(xy_addr + $20)
-    {PPUDATA}()
-    tile_below = {PPUDATA}()
-    if tile_below == ENEMY_ICON || tile_below == ENEMY_ICON_SCRATCH || tile_below == ENEMY_LEGS
-        dead = true
+
     // ppu_reset_addr(xy_addr)
     // {PPUDATA}(DEBUG_INDICATOR)
     // ppu_reset_addr(xy_addr + $20)
     // {PPUDATA}(DEBUG_INDICATOR)
 
     // there is probably an easier way to do this
-    Bool crossed_tile_boundary = last_scroll.a & $f8 != scroll_x.a & $f8
+    Bool crossed_tile_boundary = last_scroll.a >> 3 != scroll_x.a >> 3
     if crossed_tile_boundary
         load_column()
 
-    ppu_reset_scroll(scroll_x.a, 0) // 0, 0)
+    ppu_reset_scroll(scroll_x.a, 0)
     {PPUCTRL}(PPUCTRL_NMI_ON | PPUCTRL_SPR_8X16 | active_nt)
     {PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP)
 
@@ -181,7 +183,7 @@ mode game(Bool another_mode)
 
     palette = game_palette
     ppu_upload_palette()
-    
+
     ppu_reset_addr($2000)
     ppu_upload_rlz(@game_screen)
     ppu_reset_addr($2400)
@@ -191,9 +193,9 @@ mode game(Bool another_mode)
         load_column()
 
     hide_oam(0)
-    
+
     {PPUCTRL}(PPUCTRL_NMI_ON)
-    
+
     while true
         if won
             goto mode title(true) : preserves
@@ -220,7 +222,7 @@ mode game(Bool another_mode)
             player_flags |= ATTR_H_FLIP
         if pads[0].held & BUTTON_DOWN
             new_y += 1.5
-        
+
         if new_x >= MIN_X && new_x < MAX_X
             player_x = new_x
         if new_y >= MIN_Y && new_y < MAX_Y
@@ -245,8 +247,16 @@ mode game(Bool another_mode)
         set_oam(4, player_x.a + 4, player_y.a - 4, tile_right, player_flags)
 
         last_scroll = scroll_x
-        // 1.6 seems to be synced with the song. this is just hardcoded
-        if(scroll_x += 1.6) // evaluates to true if it overflowed
+
+        // 1/16 note = 1 row in the tracker = 1 byte in the chart = 1 column in the nametable
+        // tracker "speed" setting is set to 5, so 5 frames = 1/16 note
+        // this means I want to scroll 8 pixels in 5 frames, 8/5 = 1.6 scroll per frame
+
+        // there is no exact representation of 1.6 in 8.8 bit fixed point, so this
+        // gets rounded to 1.6015625, but it's close enough that I can't notice
+        // the song desyncing
+
+        if (scroll_x += 1.6) // evaluates to true if it overflowed
             active_nt ^= PPUCTRL_NT_2400
 
         anim_ctr += 1
