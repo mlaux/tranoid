@@ -50,6 +50,9 @@ ct UU FROG_DEST_TOP_RIGHT = $2343
 ct UU FROG_DEST_BOTTOM_LEFT = $2362
 ct UU FROG_DEST_BOTTOM_RIGHT = $2363
 
+ct U SFX_DEAD = $0
+ct U SFX_CHIRP = $1
+
 audio(puf1_music, "testexport.txt")
 audio(puf1_sfx, "sfx.txt", "sfx.nsf")
 
@@ -121,7 +124,7 @@ nmi title_nmi()
         // alternatively... set horiz scroll to blank area.
         // not sure which is better
         // ppu_reset_scroll(216, scroll.a)
-    puf.process(PUF_DEFAULT)
+    puf.process(%1111)
 
 mode title(Bool scroll_logo)
 : nmi title_nmi
@@ -174,12 +177,12 @@ mode title(Bool scroll_logo)
 
         if pads[0].pressed & BUTTON_DPAD
             two_player = !two_player
-            puf.play_sfx(1)
+            puf.play_sfx(SFX_CHIRP)
 
         Bool another_mode = pads[0].held & BUTTON_SELECT
         if scroll == 0 && pads[0].pressed & BUTTON_START
             if two_player
-                puf.play_sfx(0)
+                puf.play_sfx(SFX_DEAD)
             else
                 goto mode game(another_mode)
                 : preserves

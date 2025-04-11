@@ -113,7 +113,7 @@ nmi game_nmi()
     {PPUCTRL}(PPUCTRL_NMI_ON | PPUCTRL_SPR_8X16 | active_nt)
     {PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP)
 
-    puf.process(PUF_DEFAULT)
+    puf.process(%1111)
 
 fn emit_tile(U k)
 : +inline
@@ -200,11 +200,10 @@ mode game(Bool another_mode)
 
     while true
         if won
-            puf.stop(0)
             goto mode title(true) : preserves
         if dead
             puf.stop(0)
-            puf.play_sfx(0)
+            puf.play_sfx(SFX_DEAD)
             goto mode title(false) : preserves
 
         // hardcoded for sync
