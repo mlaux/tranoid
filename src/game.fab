@@ -2,7 +2,7 @@
 
 ct U[] game_palette = U[] (
     $0f, $10, $11, // black keys lanes
-    $2d, $10, $30, // white keys lanes
+    $2d, $10, $30, // white keys lanes and score
     $0f, $10, $16, // scratch lane
     $0f, $0f, $0f, 
 
@@ -34,17 +34,21 @@ ct U EMPTY_TOP_BORDER = $fc
 ct U EMPTY_LANE = $ff
 ct U DEBUG_INDICATOR = $ce
 
+ct U TRAN_SPRITE_OAM_OFFSET_LEFT = $4
+ct U TRAN_SPRITE_OAM_OFFSET_RIGHT = $8
+ct U SCORE_SPLIT_POINT = $1f // tile in BG is at y = $20
+ct U SPRITE_ZERO_ID = $b8
+
 vars /game
     Bool dead = false
     Bool won = false
-    Bool music_started = false
     U active_nt = 0
     UF scroll_x = 0
     UF last_scroll = 0
     U next_column = START_OFFSET
     UU chart_offset = 0
     UF player_x = $78
-    UF player_y = $70
+    UF player_y = $80
     U anim_ctr = 0
     CCC/charts use_chart
 
@@ -97,7 +101,7 @@ nmi game_nmi()
 
     // check for collision with enemy
     if check_tile_under_player(xy_addr) || check_tile_under_player(xy_addr + $20)
-        dead = true
+        //dead = true
 
     // ppu_reset_addr(xy_addr)
     // {PPUDATA}(DEBUG_INDICATOR)
@@ -109,9 +113,12 @@ nmi game_nmi()
     if crossed_tile_boundary
         load_column()
 
-    ppu_reset_scroll(scroll_x.a, 0)
+    ppu_reset_scroll(0, 0)
     {PPUCTRL}(PPUCTRL_NMI_ON | PPUCTRL_SPR_8X16 | active_nt)
     {PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP)
+
+    ppu_await_status(PPUSTATUS_SPR_0)
+    ppu_reset_scroll(scroll_x.a, 0)
 
     puf.process(%1111)
 
@@ -193,6 +200,8 @@ mode game(Bool another_mode)
         load_column()
 
     hide_oam(0)
+    // use palette 1 because it's all blank
+    set_oam(0, 0, SCORE_SPLIT_POINT, SPRITE_ZERO_ID, 1)
 
     {PPUCTRL}(PPUCTRL_NMI_ON)
 
@@ -206,9 +215,6 @@ mode game(Bool another_mode)
             puf.play_sfx(SFX_DEAD)
             goto mode title(false) : preserves
 
-        // hardcoded for sync
-        if next_column == $6 && !music_started
-            music_started = true
         update_pads()
 
         U player_moving = pads[0].held & BUTTON_DPAD
@@ -246,8 +252,10 @@ mode game(Bool another_mode)
             tile_left = tile_right
             tile_right = temp
 
-        set_oam(0, player_x.a - 4, player_y.a - 4, tile_left, player_flags)
-        set_oam(4, player_x.a + 4, player_y.a - 4, tile_right, player_flags)
+        set_oam(TRAN_SPRITE_OAM_OFFSET_LEFT, player_x.a - 4, player_y.a - 4, 
+                tile_left, player_flags)
+        set_oam(TRAN_SPRITE_OAM_OFFSET_RIGHT, player_x.a + 4, player_y.a - 4, 
+                tile_right, player_flags)
 
         last_scroll = scroll_x
 
