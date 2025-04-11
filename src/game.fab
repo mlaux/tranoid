@@ -38,8 +38,14 @@ ct U TRAN_SPRITE_OAM_OFFSET_LEFT = $4
 ct U TRAN_SPRITE_OAM_OFFSET_RIGHT = $8
 ct U SCORE_SPLIT_POINT = $1f // tile in BG is at y = $20
 ct U SPRITE_ZERO_ID = $b8
+ct UU P1_SCORE_DEST_ADDR = $2045
+ct UU P2_SCORE_DEST_ADDR = $2058
+
 
 vars /game
+    U[] p1_score = U[5](ZERO_TILE)
+    U[] p2_score = U[5](ZERO_TILE)
+
     Bool dead = false
     Bool won = false
     U active_nt = 0
@@ -101,12 +107,15 @@ nmi game_nmi()
 
     // check for collision with enemy
     if check_tile_under_player(xy_addr) || check_tile_under_player(xy_addr + $20)
-        //dead = true
+        dead = true
 
     // ppu_reset_addr(xy_addr)
     // {PPUDATA}(DEBUG_INDICATOR)
     // ppu_reset_addr(xy_addr + $20)
     // {PPUDATA}(DEBUG_INDICATOR)
+
+    draw_score(p1_score, P1_SCORE_DEST_ADDR)
+    draw_score(p2_score, P2_SCORE_DEST_ADDR)
 
     // there is probably an easier way to do this
     Bool crossed_tile_boundary = last_scroll.a >> 3 != scroll_x.a >> 3
@@ -163,6 +172,47 @@ fn load_column()
         next_column = 0
     chart_offset += 1
 
+fn process_input()
+    U player_moving = pads[0].held & BUTTON_DPAD
+    U player_flags = 0 // for horizontal flip
+    UF new_x = player_x
+    UF new_y = player_y
+
+    if pads[0].held & BUTTON_RIGHT
+        new_x += 1.5
+    if pads[0].held & BUTTON_UP
+        new_y -= 1.5
+    if pads[0].held & BUTTON_LEFT
+        new_x -= 1.5
+        player_flags |= ATTR_H_FLIP
+    if pads[0].held & BUTTON_DOWN
+        new_y += 1.5
+
+    if new_x >= MIN_X && new_x < MAX_X
+        player_x = new_x
+    if new_y >= MIN_Y && new_y < MAX_Y
+        player_y = new_y
+
+    U tile_left = TILE_LEFT_STANDING
+    U tile_right = TILE_RIGHT_STANDING
+    if anim_ctr >= 6 // && player_moving
+        state(3)
+        tile_left = TILE_LEFT_RUNNING
+        tile_right = TILE_RIGHT_RUNNING
+    else
+        state(0)
+
+    // need to swap the tile IDs not just the tile contents
+    if player_flags
+        U temp = tile_left
+        tile_left = tile_right
+        tile_right = temp
+
+    set_oam(TRAN_SPRITE_OAM_OFFSET_LEFT, player_x.a - 4, player_y.a - 4, 
+            tile_left, player_flags)
+    set_oam(TRAN_SPRITE_OAM_OFFSET_RIGHT, player_x.a + 4, player_y.a - 4, 
+            tile_right, player_flags)
+
 mode game(Bool another_mode)
 : nmi game_nmi
     {PPUCTRL}(0)
@@ -209,53 +259,16 @@ mode game(Bool another_mode)
 
     while true
         if won
-            goto mode title(true) : preserves
+            update_hi_score()
+            goto mode title(true) : preserves /global
         if dead
             puf.stop(0)
             puf.play_sfx(SFX_DEAD)
-            goto mode title(false) : preserves
+            update_hi_score()
+            goto mode title(false) : preserves /global
 
         update_pads()
-
-        U player_moving = pads[0].held & BUTTON_DPAD
-        U player_flags = 0 // for horizontal flip
-        UF new_x = player_x
-        UF new_y = player_y
-
-        if pads[0].held & BUTTON_RIGHT
-            new_x += 1.5
-        if pads[0].held & BUTTON_UP
-            new_y -= 1.5
-        if pads[0].held & BUTTON_LEFT
-            new_x -= 1.5
-            player_flags |= ATTR_H_FLIP
-        if pads[0].held & BUTTON_DOWN
-            new_y += 1.5
-
-        if new_x >= MIN_X && new_x < MAX_X
-            player_x = new_x
-        if new_y >= MIN_Y && new_y < MAX_Y
-            player_y = new_y
-
-        U tile_left = TILE_LEFT_STANDING
-        U tile_right = TILE_RIGHT_STANDING
-        if anim_ctr >= 6 // && player_moving
-            state(3)
-            tile_left = TILE_LEFT_RUNNING
-            tile_right = TILE_RIGHT_RUNNING
-        else
-            state(0)
-
-        // need to swap the tile IDs not just the tile contents
-        if player_flags
-            U temp = tile_left
-            tile_left = tile_right
-            tile_right = temp
-
-        set_oam(TRAN_SPRITE_OAM_OFFSET_LEFT, player_x.a - 4, player_y.a - 4, 
-                tile_left, player_flags)
-        set_oam(TRAN_SPRITE_OAM_OFFSET_RIGHT, player_x.a + 4, player_y.a - 4, 
-                tile_right, player_flags)
+        process_input()
 
         last_scroll = scroll_x
 
@@ -276,4 +289,5 @@ mode game(Bool another_mode)
 
         //{PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP | PPUMASK_EMPHASIZE_R | PPUMASK_EMPHASIZE_G | PPUMASK_EMPHASIZE_B)
         frame += 1
+        increment_score()
         nmi

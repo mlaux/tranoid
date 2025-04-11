@@ -1,0 +1,51 @@
+ct U ZERO_TILE = $d0
+ct U NINE_TILE = $d9
+
+fn increment_score()
+    p1_score[4] += 1
+    for S k = 4; k >= 1; k -= 1
+        U idx = U(k)
+        if p1_score[idx] == NINE_TILE + 1
+            p1_score[idx] = ZERO_TILE
+            p1_score[idx - 1] += 1
+
+fn draw_score(U[5] score, UU dest_addr)
+    ppu_reset_addr(dest_addr)
+    for U k = 0; k < 5; k += 1
+        {PPUDATA}(score[k])
+    // draw it again for scrolling...
+    ppu_reset_addr(dest_addr + $400)
+    for U k = 0; k < 5; k += 1
+        {PPUDATA}(score[k])
+
+fn atoi(U[5] str) UU
+    UU val = 0
+
+    // need to find first non zero index to avoid extra multiplications
+    // at the end
+    U first_non_zero = 5
+    for U k = 0; k < 5; k += 1
+        if str[k] != ZERO_TILE
+            first_non_zero = k
+            break
+
+    for U k = first_non_zero; k < 5; k += 1
+        val = (val << 3) + (val << 1)
+        val += str[U(k)] - ZERO_TILE
+
+    return val
+
+fn update_hi_score()
+    UU current_p1 = atoi(p1_score)
+    UU current_p2 = atoi(p2_score)
+    UU hi = atoi(hi_score)
+
+    if current_p1 <= hi
+        return
+    for U k = 0; k < 5; k += 1
+        hi_score[k] = p1_score[k]
+
+    if current_p2 <= hi
+        return
+    for U k = 0; k < 5; k += 1
+        hi_score[k] = p2_score[k]

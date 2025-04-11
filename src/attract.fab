@@ -124,7 +124,7 @@ mode attract()
                 delay = 0
                 attract_mode_scene += 1
                 if attract_mode_scene == 3
-                    goto mode title(true) : preserves
+                    goto mode title(true) : preserves /global
                 attract_line_num += 1
                 attract_src_index = 0
                 attract_dst_addr = opening_line_starts[attract_line_num]
@@ -141,7 +141,7 @@ mode attract()
         update_pads()
         if pads[0].pressed & BUTTON_START
             goto mode title(false)
-            : preserves
+            : preserves /global
 
         frame += 1
         nmi
