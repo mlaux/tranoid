@@ -162,11 +162,12 @@ nmi game_nmi()
         load_column()
 
     ppu_reset_scroll(0, 0)
-    {PPUCTRL}(PPUCTRL_NMI_ON | PPUCTRL_SPR_8X16 | active_nt)
+    {PPUCTRL}(PPUCTRL_NMI_ON | PPUCTRL_SPR_8X16)
     {PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP)
 
     ppu_await_status(PPUSTATUS_SPR_0)
     ppu_reset_scroll(scroll_x.a, 0)
+    {PPUCTRL}(PPUCTRL_NMI_ON | PPUCTRL_SPR_8X16 | active_nt)
 
     puf.process(%1111)
 

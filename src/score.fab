@@ -22,10 +22,6 @@ fn draw_score(U[5] score, UU dest_addr)
     ppu_reset_addr(dest_addr)
     for U k = 0; k < 5; k += 1
         {PPUDATA}(score[k])
-    // draw it again for scrolling...
-    ppu_reset_addr(dest_addr + $400)
-    for U k = 0; k < 5; k += 1
-        {PPUDATA}(score[k])
 
 fn atoi(U[5] str) UU
     UU val = 0
