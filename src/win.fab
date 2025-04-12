@@ -22,6 +22,7 @@ vars
 
 nmi win_nmi()
     ppu_upload_palette()
+    ppu_upload_oam_poll_pads(0)
     ppu_reset_scroll(0, 0)
     {PPUCTRL}(PPUCTRL_NMI_ON)
     {PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP)
