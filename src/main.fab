@@ -32,11 +32,11 @@ vars /title
     Bool two_player = false
 
 ct U[] hidden_credit = U[] (
-    $c0, $c1, $c2, $0, // NES
-    $c3, $c9, $c4, $c5, $0, // PORT
-    $c6, $c7, $0, // BY
-    $c8, $c9, $c0, $c2, $c5, $c8, $ca, $c2, $c5, $0, // CONSTCAST
-    $cb, $cc, $cb, $cd // 2025
+    $70, $71, $72, $0, // NES
+    $73, $79, $74, $75, $0, // PORT
+    $76, $77, $0, // BY
+    $78, $79, $70, $72, $75, $78, $7a, $72, $75, $0, // CONSTCAST
+    $7b, $7c, $7b, $7d // 2025
 )
 ct UU HIDDEN_CREDIT_POS = $2063
 ct U PLAYER_SELECT_ICON = $f7

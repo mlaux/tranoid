@@ -18,14 +18,20 @@ ct U MIN_X = $10
 ct U MAX_X = $f0
 ct U MIN_Y = $38
 ct U MAX_Y = $b8
+ct U WIDTH_IN_TILES = $40
+ct U START_OFFSET = $10
 
+// sprite tiles
 ct U TILE_LEFT_RUNNING = $b0
 ct U TILE_RIGHT_RUNNING = $b2
 ct U TILE_LEFT_STANDING = $b4
 ct U TILE_RIGHT_STANDING = $b6
-ct U WIDTH_IN_TILES = $40
-ct U START_OFFSET = $10
+ct U TILE_LEFT_DEAD1 = $c0
+ct U TILE_RIGHT_DEAD1 = $c2
+ct U TILE_LEFT_DEAD2 = $c4
+ct U TILE_RIGHT_DEAD2 = $c6
 
+// BG tiles
 ct U TRAN_ICON = $f7
 ct U ENEMY_ICON = $f8
 ct U ENEMY_ICON_SCRATCH = $f9
@@ -44,7 +50,6 @@ ct U SPRITE_ZERO_ID = $b8
 ct UU P1_SCORE_DEST_ADDR = $2045
 ct UU P2_SCORE_DEST_ADDR = $2058
 
-
 vars /game
     U[] p1_score = U[5](ZERO_TILE)
     U[] p2_score = U[5](ZERO_TILE)
@@ -52,6 +57,9 @@ vars /game
 
     Bool dead_1p = false
     Bool dead_2p = false
+    U dead_timer = 127
+    Bool stop_music = false
+    Bool play_dead_sound = false
 
     Bool won = false
     U active_nt = 0
@@ -60,9 +68,9 @@ vars /game
     U next_column = START_OFFSET
     UU chart_offset = 0
     UF player_x = $78
-    UF player_y = $80
+    UF player_y = $88
     UF player2_x = $78
-    UF player2_y = $90
+    UF player2_y = $98
 
     UU tile_under_p1
     UU tile_under_p2
@@ -119,15 +127,25 @@ nmi game_nmi()
         ppu_upload_oam_poll_pads(0)
         ppu_upload_palette()
 
-    if check_tile_under_player(tile_under_p1) || check_tile_under_player(tile_under_p1 + $20)
-        dead_1p = true
-    if is_two_player && (check_tile_under_player(tile_under_p2) 
-            || check_tile_under_player(tile_under_p2 + $20))
-        dead_2p = true
+    // does not work if i have all three conditions in one if statement for some reason
+    if !dead_1p
+        if check_tile_under_player(tile_under_p1) || check_tile_under_player(tile_under_p1 + $20)
+            // only stop the music if the other player is dead too
+            if U(is_two_player) == U(dead_2p)
+                stop_music = true
+            play_dead_sound = true
+            dead_1p = true
 
-    // ppu_reset_addr(xy_addr)
+    if is_two_player && !dead_2p 
+        if (check_tile_under_player(tile_under_p2) || check_tile_under_player(tile_under_p2 + $20))
+            if dead_1p
+                stop_music = true
+            play_dead_sound = true
+            dead_2p = true
+
+    // ppu_reset_addr(tile_under_p1)
     // {PPUDATA}(DEBUG_INDICATOR)
-    // ppu_reset_addr(xy_addr + $20)
+    // ppu_reset_addr(tile_under_p1 + $20)
     // {PPUDATA}(DEBUG_INDICATOR)
 
     draw_score(p1_score, P1_SCORE_DEST_ADDR)
@@ -189,35 +207,40 @@ fn load_column()
     chart_offset += 1
 
 // not having pointers makes this very messy
-fn process_input_1p()
+fn update_1p()
     U player_flags = 0 // for horizontal flip
 
     UF new_x = player_x
     UF new_y = player_y
 
-    if pads[0].held & BUTTON_RIGHT
-        new_x += 1.5
-    if pads[0].held & BUTTON_UP
-        new_y -= 1.5
-    if pads[0].held & BUTTON_LEFT
-        new_x -= 1.5
-        player_flags |= ATTR_H_FLIP
-    if pads[0].held & BUTTON_DOWN
-        new_y += 1.5
+    if !dead_1p
+        if pads[0].held & BUTTON_RIGHT
+            new_x += 1.5
+        if pads[0].held & BUTTON_UP
+            new_y -= 1.5
+        if pads[0].held & BUTTON_LEFT
+            new_x -= 1.5
+            player_flags |= ATTR_H_FLIP
+        if pads[0].held & BUTTON_DOWN
+            new_y += 1.5
 
-    if new_x >= MIN_X && new_x < MAX_X
-        player_x = new_x
-    if new_y >= MIN_Y && new_y < MAX_Y
-        player_y = new_y
+        if new_x >= MIN_X && new_x < MAX_X
+            player_x = new_x
+        if new_y >= MIN_Y && new_y < MAX_Y
+            player_y = new_y
 
     U tile_left = TILE_LEFT_STANDING
     U tile_right = TILE_RIGHT_STANDING
     if anim_ctr >= 6
-        state(3)
         tile_left = TILE_LEFT_RUNNING
         tile_right = TILE_RIGHT_RUNNING
-    else
-        state(0)
+
+    if dead_1p
+        tile_left = TILE_LEFT_DEAD1
+        tile_right = TILE_RIGHT_DEAD1
+        if anim_ctr >= 6
+            tile_left = TILE_LEFT_DEAD2
+            tile_right = TILE_RIGHT_DEAD2
 
     // need to swap the tile IDs not just the tile contents
     if player_flags
@@ -225,44 +248,55 @@ fn process_input_1p()
         tile_left = tile_right
         tile_right = temp
 
-    set_oam(P1_OAM_OFFSET_LEFT, player_x.a - 4, player_y.a - 4, 
+    set_oam(P1_OAM_OFFSET_LEFT, player_x.a - 4, player_y.a - 8, 
             tile_left, player_flags)
-    set_oam(P1_OAM_OFFSET_RIGHT, player_x.a + 4, player_y.a - 4, 
+    set_oam(P1_OAM_OFFSET_RIGHT, player_x.a + 4, player_y.a - 8, 
             tile_right, player_flags)
 
-fn process_input_2p()
+fn update_2p()
     U player2_flags = 0
+
     UF new_x2 = player2_x
     UF new_y2 = player2_y
-    if pads[1].held & BUTTON_RIGHT
-        new_x2 += 1.5
-    if pads[1].held & BUTTON_UP
-        new_y2 -= 1.5
-    if pads[1].held & BUTTON_LEFT
-        new_x2 -= 1.5
-        player2_flags |= ATTR_H_FLIP
-    if pads[1].held & BUTTON_DOWN
-        new_y2 += 1.5
-    if new_x2 >= MIN_X && new_x2 < MAX_X
-        player2_x = new_x2
-    if new_y2 >= MIN_Y && new_y2 < MAX_Y
-        player2_y = new_y2
 
-    U tile_left2 = TILE_LEFT_STANDING
-    U tile_right2 = TILE_RIGHT_STANDING
+    if !dead_2p
+        if pads[1].held & BUTTON_RIGHT
+            new_x2 += 1.5
+        if pads[1].held & BUTTON_UP
+            new_y2 -= 1.5
+        if pads[1].held & BUTTON_LEFT
+            new_x2 -= 1.5
+            player2_flags |= ATTR_H_FLIP
+        if pads[1].held & BUTTON_DOWN
+            new_y2 += 1.5
+        if new_x2 >= MIN_X && new_x2 < MAX_X
+            player2_x = new_x2
+        if new_y2 >= MIN_Y && new_y2 < MAX_Y
+            player2_y = new_y2
+
+    U tile_left = TILE_LEFT_STANDING
+    U tile_right = TILE_RIGHT_STANDING
+
     if anim_ctr >= 6
-        tile_left2 = TILE_LEFT_RUNNING
-        tile_right2 = TILE_RIGHT_RUNNING
+        tile_left = TILE_LEFT_RUNNING
+        tile_right = TILE_RIGHT_RUNNING
+
+    if dead_2p
+        tile_left = TILE_LEFT_DEAD1
+        tile_right = TILE_RIGHT_DEAD1
+        if anim_ctr >= 6
+            tile_left = TILE_LEFT_DEAD2
+            tile_right = TILE_RIGHT_DEAD2
 
     if player2_flags
-        U temp = tile_left2
-        tile_left2 = tile_right2
-        tile_right2 = temp
+        U temp = tile_left
+        tile_left = tile_right
+        tile_right = temp
 
-    set_oam(P2_OAM_OFFSET_LEFT, player2_x.a - 4, player2_y.a - 4, 
-            tile_left2, player2_flags | 1)
-    set_oam(P2_OAM_OFFSET_RIGHT, player2_x.a + 4, player2_y.a - 4, 
-            tile_right2, player2_flags | 1)
+    set_oam(P2_OAM_OFFSET_LEFT, player2_x.a - 4, player2_y.a - 8, 
+            tile_left, player2_flags | 1)
+    set_oam(P2_OAM_OFFSET_RIGHT, player2_x.a + 4, player2_y.a - 8, 
+            tile_right, player2_flags | 1)
 
 
 mode game(Bool another_mode, Bool two_player)
@@ -318,21 +352,26 @@ mode game(Bool another_mode, Bool two_player)
 
         // using == as "logical implies" is always weird
         if dead_1p && (U(is_two_player) == U(dead_2p))
+            dead_timer -= 1
+            if dead_timer == 0
+                update_hi_score()
+                goto mode title(false) : preserves /global
+
+        if stop_music
             puf.stop(0)
+            stop_music = false
+        if play_dead_sound
             puf.play_sfx(SFX_DEAD)
-            update_hi_score()
-            goto mode title(false) : preserves /global
+            play_dead_sound = false
 
         update_pads()
-
-        if !dead_1p
-            process_input_1p()
-        if is_two_player && !dead_2p
-            process_input_2p()
+        update_1p()
+        if is_two_player
+            update_2p()
 
         // check for collision with enemy
-        tile_under_p1 = calc_tile_at_pixel(player_x, player_y)
-        tile_under_p2 = calc_tile_at_pixel(player2_x, player2_y)
+        tile_under_p1 = calc_tile_at_pixel(player_x + 16, player_y - 4)
+        tile_under_p2 = calc_tile_at_pixel(player2_x + 16, player2_y - 4)
 
         last_scroll = scroll_x
 
@@ -348,13 +387,17 @@ mode game(Bool another_mode, Bool two_player)
             active_nt ^= PPUCTRL_NT_2400
 
         anim_ctr += 1
+        if anim_ctr >= 6
+            state(3)
+        else
+            state(0)
         if anim_ctr >= 12
             anim_ctr = 0
 
         //{PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP | PPUMASK_EMPHASIZE_R | PPUMASK_EMPHASIZE_G | PPUMASK_EMPHASIZE_B)
         frame += 1
-        if (!dead_1p)
+        if !dead_1p
             increment_score_1p()
-        if (is_two_player && !dead_2p)
+        if is_two_player && !dead_2p
             increment_score_2p()
         nmi
