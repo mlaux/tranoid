@@ -92,7 +92,7 @@ ct fn tile_ppuaddr_table() UU[WIDTH_IN_TILES]
 
 fn check_tile_under_player(UU addr) Bool
 : +inline
-    ppu_reset_addr(addr)
+    ppu_set_addr(addr)
     {PPUDATA}()
     UU tile_below = {PPUDATA}()
     return tile_below == ENEMY_ICON || tile_below == ENEMY_ICON_SCRATCH || tile_below == ENEMY_LEGS
@@ -128,6 +128,7 @@ nmi game_nmi()
         ppu_upload_palette()
 
     // does not work if i have all three conditions in one if statement for some reason
+    {PPUSTATUS}()
     if !dead_1p
         if check_tile_under_player(tile_under_p1) || check_tile_under_player(tile_under_p1 + $20)
             // only stop the music if the other player is dead too
