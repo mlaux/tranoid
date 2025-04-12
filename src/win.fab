@@ -1,0 +1,43 @@
+
+ct U[25] palette_win = U[25](
+    $0f, $0f, $30,
+    $0f, $0f, $0f,
+    $0f, $0f, $0f,
+    $0f, $0f, $0f,
+
+    $0f, $0f, $0f,
+    $0f, $0f, $0f,
+    $0f, $0f, $0f,
+    $0f, $0f, $0f,
+
+    $0f // background color
+)
+
+data /rlz
+    [] win_screen
+        file(rlz, "win.nam")
+
+vars
+    U timer = 255
+
+nmi win_nmi()
+    ppu_upload_palette()
+    ppu_reset_scroll(0, 0)
+    {PPUCTRL}(PPUCTRL_NMI_ON)
+    {PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP)
+
+mode win()
+: nmi win_nmi
+    {PPUCTRL}(0)
+    {PPUMASK}(0)
+    palette = palette_win
+    ppu_upload_palette()
+    ppu_reset_addr($2000)
+    ppu_upload_rlz(@win_screen)
+    hide_oam(0)
+    {PPUCTRL}(PPUCTRL_NMI_ON)
+    while true
+        timer -= 1
+        if timer == 0
+            goto mode title(true) : preserves /global
+        nmi

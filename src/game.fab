@@ -51,22 +51,25 @@ ct UU P1_SCORE_DEST_ADDR = $2045
 ct UU P2_SCORE_DEST_ADDR = $2058
 
 vars /game
+    Bool is_two_player = false
     U[] p1_score = U[5](ZERO_TILE)
     U[] p2_score = U[5](ZERO_TILE)
-    Bool is_two_player = false
 
+    // should have used states instead of all these flags
+    Bool game_active = true
+    Bool won = false
     Bool dead_1p = false
     Bool dead_2p = false
-    U dead_timer = 127
     Bool stop_music = false
     Bool play_dead_sound = false
 
-    Bool won = false
+    U ending_timer = 127
     U active_nt = 0
     UF scroll_x = 0
     UF last_scroll = 0
     U next_column = START_OFFSET
     UU chart_offset = 0
+
     UF player_x = $78
     UF player_y = $88
     UF player2_x = $78
@@ -154,7 +157,7 @@ nmi game_nmi()
 
     // there is probably an easier way to do this
     Bool crossed_tile_boundary = last_scroll.a >> 3 != scroll_x.a >> 3
-    if crossed_tile_boundary
+    if game_active && crossed_tile_boundary
         load_column()
 
     ppu_reset_scroll(0, 0)
@@ -299,6 +302,38 @@ fn update_2p()
     set_oam(P2_OAM_OFFSET_RIGHT, player2_x.a + 4, player2_y.a - 8, 
             tile_right, player2_flags | 1)
 
+fn check_end_conditions()
+    if won
+        game_active = false
+        ending_timer -= 1
+        if ending_timer == 0
+            update_hi_score()
+            goto mode win() : preserves /global
+
+    // using == as "logical implies" is always weird
+    if dead_1p && (U(is_two_player) == U(dead_2p))
+        game_active = false
+        ending_timer -= 1
+        if ending_timer == 0
+            update_hi_score()
+            goto mode title(false) : preserves /global
+
+fn update_animations()
+    anim_ctr += 1
+    if anim_ctr >= 6
+        state(3)
+    else
+        state(0)
+    if anim_ctr >= 12
+        anim_ctr = 0
+
+fn check_sound_flags()
+    if stop_music
+        puf.stop(0)
+        stop_music = false
+    if play_dead_sound
+        puf.play_sfx(SFX_DEAD)
+        play_dead_sound = false
 
 mode game(Bool another_mode, Bool two_player)
 : nmi game_nmi
@@ -347,58 +382,38 @@ mode game(Bool another_mode, Bool two_player)
     puf.play_track(0)
 
     while true
-        if won
-            update_hi_score()
-            goto mode title(true) : preserves /global
-
-        // using == as "logical implies" is always weird
-        if dead_1p && (U(is_two_player) == U(dead_2p))
-            dead_timer -= 1
-            if dead_timer == 0
-                update_hi_score()
-                goto mode title(false) : preserves /global
-
-        if stop_music
-            puf.stop(0)
-            stop_music = false
-        if play_dead_sound
-            puf.play_sfx(SFX_DEAD)
-            play_dead_sound = false
+        check_end_conditions()
 
         update_pads()
         update_1p()
         if is_two_player
             update_2p()
 
-        // check for collision with enemy
-        tile_under_p1 = calc_tile_at_pixel(player_x + 16, player_y - 4)
-        tile_under_p2 = calc_tile_at_pixel(player2_x + 16, player2_y - 4)
+        if game_active
+            if !dead_1p
+                increment_score_1p()
+            if is_two_player && !dead_2p
+                increment_score_2p()
 
-        last_scroll = scroll_x
+            // check for collision with enemy
+            tile_under_p1 = calc_tile_at_pixel(player_x + 16, player_y - 4)
+            tile_under_p2 = calc_tile_at_pixel(player2_x + 16, player2_y - 4)
 
-        // 1/16 note = 1 row in the tracker = 1 byte in the chart = 1 column in the nametable
-        // tracker "speed" setting is set to 5, so 5 frames = 1/16 note
-        // this means I want to scroll 8 pixels in 5 frames, 8/5 = 1.6 scroll per frame
+            last_scroll = scroll_x
 
-        // there is no exact representation of 1.6 in 8.8 bit fixed point, so this
-        // gets rounded to 1.6015625, but it's close enough that I can't notice
-        // the song desyncing
+            // 1/16 note = 1 row in the tracker = 1 byte in the chart = 1 column in the nametable
+            // tracker "speed" setting is set to 5, so 5 frames = 1/16 note
+            // this means I want to scroll 8 pixels in 5 frames, 8/5 = 1.6 scroll per frame
 
-        if (scroll_x += 1.6) // evaluates to true if it overflowed
-            active_nt ^= PPUCTRL_NT_2400
+            // there is no exact representation of 1.6 in 8.8 bit fixed point, so this
+            // gets rounded to 1.6015625, but it's close enough that I can't notice
+            // the song desyncing
 
-        anim_ctr += 1
-        if anim_ctr >= 6
-            state(3)
-        else
-            state(0)
-        if anim_ctr >= 12
-            anim_ctr = 0
+            if (scroll_x += 1.6) // evaluates to true if it overflowed
+                active_nt ^= PPUCTRL_NT_2400
 
-        //{PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP | PPUMASK_EMPHASIZE_R | PPUMASK_EMPHASIZE_G | PPUMASK_EMPHASIZE_B)
+        update_animations()
+        check_sound_flags()
+
         frame += 1
-        if !dead_1p
-            increment_score_1p()
-        if is_two_player && !dead_2p
-            increment_score_2p()
         nmi
