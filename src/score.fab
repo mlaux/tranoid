@@ -1,13 +1,22 @@
 ct U ZERO_TILE = $d0
 ct U NINE_TILE = $d9
 
-fn increment_score()
+fn increment_score_1p()
     p1_score[4] += 1
     for S k = 4; k >= 1; k -= 1
         U idx = U(k)
         if p1_score[idx] == NINE_TILE + 1
             p1_score[idx] = ZERO_TILE
             p1_score[idx - 1] += 1
+
+// NO POINTERS
+fn increment_score_2p()
+    p2_score[4] += 1
+    for S k = 4; k >= 1; k -= 1
+        U idx = U(k)
+        if p2_score[idx] == NINE_TILE + 1
+            p2_score[idx] = ZERO_TILE
+            p2_score[idx - 1] += 1
 
 fn draw_score(U[5] score, UU dest_addr)
     ppu_reset_addr(dest_addr)
@@ -45,7 +54,7 @@ fn update_hi_score()
     for U k = 0; k < 5; k += 1
         hi_score[k] = p1_score[k]
 
-    if current_p2 <= hi
+    if current_p2 <= hi && current_p2 <= current_p1
         return
     for U k = 0; k < 5; k += 1
         hi_score[k] = p2_score[k]

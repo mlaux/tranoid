@@ -65,7 +65,7 @@ audio(puf1_sfx, "sfx.txt", "sfx.nsf")
 mode main()
     puf.init(system)
     //goto mode title(true) : preserves /global
-    goto mode game(false) : preserves /global
+    goto mode game(false, true) : preserves /global
 
 fn draw_hidden_credit()
 : +inline
@@ -189,11 +189,11 @@ mode title(Bool scroll_logo)
 
         Bool another_mode = pads[0].held & BUTTON_SELECT
         if scroll == 0 && pads[0].pressed & BUTTON_START
-            if two_player
-                puf.play_sfx(SFX_DEAD)
-            else
-                goto mode game(another_mode)
-                : preserves /global
+            // if two_player
+            //     puf.play_sfx(SFX_DEAD)
+            // else
+            goto mode game(another_mode, two_player)
+            : preserves /global
 
         frame += 1
         if frame >= $200

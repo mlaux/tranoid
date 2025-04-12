@@ -7,7 +7,7 @@ ct U[] game_palette = U[] (
     $0f, $0f, $0f, 
 
     $2c, $27, $30, // tran color
-    $0f, $0f, $0f, 
+    $2a, $27, $30, 
     $0f, $0f, $0f, 
     $0f, $0f, $0f, 
 
@@ -34,8 +34,11 @@ ct U EMPTY_TOP_BORDER = $fc
 ct U EMPTY_LANE = $ff
 ct U DEBUG_INDICATOR = $ce
 
-ct U TRAN_SPRITE_OAM_OFFSET_LEFT = $4
-ct U TRAN_SPRITE_OAM_OFFSET_RIGHT = $8
+ct U P1_OAM_OFFSET_LEFT = $4
+ct U P1_OAM_OFFSET_RIGHT = $8
+ct U P2_OAM_OFFSET_LEFT = $c
+ct U P2_OAM_OFFSET_RIGHT = $10
+
 ct U SCORE_SPLIT_POINT = $1f // tile in BG is at y = $20
 ct U SPRITE_ZERO_ID = $b8
 ct UU P1_SCORE_DEST_ADDR = $2045
@@ -45,8 +48,11 @@ ct UU P2_SCORE_DEST_ADDR = $2058
 vars /game
     U[] p1_score = U[5](ZERO_TILE)
     U[] p2_score = U[5](ZERO_TILE)
+    Bool is_two_player = false
 
-    Bool dead = false
+    Bool dead_1p = false
+    Bool dead_2p = false
+
     Bool won = false
     U active_nt = 0
     UF scroll_x = 0
@@ -55,6 +61,12 @@ vars /game
     UU chart_offset = 0
     UF player_x = $78
     UF player_y = $80
+    UF player2_x = $78
+    UF player2_y = $90
+
+    UU tile_under_p1
+    UU tile_under_p2
+
     U anim_ctr = 0
     CCC/charts use_chart
 
@@ -77,16 +89,12 @@ fn check_tile_under_player(UU addr) Bool
     UU tile_below = {PPUDATA}()
     return tile_below == ENEMY_ICON || tile_below == ENEMY_ICON_SCRATCH || tile_below == ENEMY_LEGS
 
-nmi game_nmi()
-    if ready
-        ppu_upload_oam_poll_pads(0)
-        ppu_upload_palette()
-
+fn calc_tile_at_pixel(UF x, UF y) UU
     // get player X position as a value from 0 to ff which is a pixel offset
     // in the current nametable
     // https://github.com/pubby/nesfab/issues/35
     // workaround: OR with $100 first
-    UU use_x = (UU(scroll_x.a) | $0100) + UU(player_x.a)
+    UU use_x = (UU(scroll_x.a) | $0100) + UU(x.a)
     use_x -= $100
     if active_nt != 0
         use_x += $100
@@ -101,13 +109,21 @@ nmi game_nmi()
         nt_base = $2400
 
     // convert from pixel coordinates to tile address
-    UU xy_addr = nt_base + (UU(player_y.a >> 3) << 5) + (use_x >> 3)
+    UU xy_addr = nt_base + (UU(y.a >> 3) << 5) + (use_x >> 3)
     if use_x >= $100
         xy_addr -= $20 // why?
+    return xy_addr
 
-    // check for collision with enemy
-    if check_tile_under_player(xy_addr) || check_tile_under_player(xy_addr + $20)
-        dead = true
+nmi game_nmi()
+    if ready
+        ppu_upload_oam_poll_pads(0)
+        ppu_upload_palette()
+
+    if check_tile_under_player(tile_under_p1) || check_tile_under_player(tile_under_p1 + $20)
+        dead_1p = true
+    if is_two_player && (check_tile_under_player(tile_under_p2) 
+            || check_tile_under_player(tile_under_p2 + $20))
+        dead_2p = true
 
     // ppu_reset_addr(xy_addr)
     // {PPUDATA}(DEBUG_INDICATOR)
@@ -172,9 +188,10 @@ fn load_column()
         next_column = 0
     chart_offset += 1
 
-fn process_input()
-    U player_moving = pads[0].held & BUTTON_DPAD
+// not having pointers makes this very messy
+fn process_input_1p()
     U player_flags = 0 // for horizontal flip
+
     UF new_x = player_x
     UF new_y = player_y
 
@@ -195,7 +212,7 @@ fn process_input()
 
     U tile_left = TILE_LEFT_STANDING
     U tile_right = TILE_RIGHT_STANDING
-    if anim_ctr >= 6 // && player_moving
+    if anim_ctr >= 6
         state(3)
         tile_left = TILE_LEFT_RUNNING
         tile_right = TILE_RIGHT_RUNNING
@@ -208,13 +225,50 @@ fn process_input()
         tile_left = tile_right
         tile_right = temp
 
-    set_oam(TRAN_SPRITE_OAM_OFFSET_LEFT, player_x.a - 4, player_y.a - 4, 
+    set_oam(P1_OAM_OFFSET_LEFT, player_x.a - 4, player_y.a - 4, 
             tile_left, player_flags)
-    set_oam(TRAN_SPRITE_OAM_OFFSET_RIGHT, player_x.a + 4, player_y.a - 4, 
+    set_oam(P1_OAM_OFFSET_RIGHT, player_x.a + 4, player_y.a - 4, 
             tile_right, player_flags)
 
-mode game(Bool another_mode)
+fn process_input_2p()
+    U player2_flags = 0
+    UF new_x2 = player2_x
+    UF new_y2 = player2_y
+    if pads[1].held & BUTTON_RIGHT
+        new_x2 += 1.5
+    if pads[1].held & BUTTON_UP
+        new_y2 -= 1.5
+    if pads[1].held & BUTTON_LEFT
+        new_x2 -= 1.5
+        player2_flags |= ATTR_H_FLIP
+    if pads[1].held & BUTTON_DOWN
+        new_y2 += 1.5
+    if new_x2 >= MIN_X && new_x2 < MAX_X
+        player2_x = new_x2
+    if new_y2 >= MIN_Y && new_y2 < MAX_Y
+        player2_y = new_y2
+
+    U tile_left2 = TILE_LEFT_STANDING
+    U tile_right2 = TILE_RIGHT_STANDING
+    if anim_ctr >= 6
+        tile_left2 = TILE_LEFT_RUNNING
+        tile_right2 = TILE_RIGHT_RUNNING
+
+    if player2_flags
+        U temp = tile_left2
+        tile_left2 = tile_right2
+        tile_right2 = temp
+
+    set_oam(P2_OAM_OFFSET_LEFT, player2_x.a - 4, player2_y.a - 4, 
+            tile_left2, player2_flags | 1)
+    set_oam(P2_OAM_OFFSET_RIGHT, player2_x.a + 4, player2_y.a - 4, 
+            tile_right2, player2_flags | 1)
+
+
+mode game(Bool another_mode, Bool two_player)
 : nmi game_nmi
+    is_two_player = two_player
+
     {PPUCTRL}(0)
     {PPUMASK}(0)
 
@@ -261,14 +315,24 @@ mode game(Bool another_mode)
         if won
             update_hi_score()
             goto mode title(true) : preserves /global
-        if dead
+
+        // using == as "logical implies" is always weird
+        if dead_1p && (U(is_two_player) == U(dead_2p))
             puf.stop(0)
             puf.play_sfx(SFX_DEAD)
             update_hi_score()
             goto mode title(false) : preserves /global
 
         update_pads()
-        process_input()
+
+        if !dead_1p
+            process_input_1p()
+        if is_two_player && !dead_2p
+            process_input_2p()
+
+        // check for collision with enemy
+        tile_under_p1 = calc_tile_at_pixel(player_x, player_y)
+        tile_under_p2 = calc_tile_at_pixel(player2_x, player2_y)
 
         last_scroll = scroll_x
 
@@ -289,5 +353,8 @@ mode game(Bool another_mode)
 
         //{PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP | PPUMASK_EMPHASIZE_R | PPUMASK_EMPHASIZE_G | PPUMASK_EMPHASIZE_B)
         frame += 1
-        increment_score()
+        if (!dead_1p)
+            increment_score_1p()
+        if (is_two_player && !dead_2p)
+            increment_score_2p()
         nmi
