@@ -20,6 +20,7 @@ ct U MIN_Y = $38
 ct U MAX_Y = $b8
 ct U WIDTH_IN_TILES = $40
 ct U START_OFFSET = $10
+ct Real PLAYER_SPEED = 1.6
 
 // sprite tiles
 ct U TILE_LEFT_RUNNING = $b0
@@ -219,14 +220,14 @@ fn update_1p()
 
     if !dead_1p
         if pads[0].held & BUTTON_RIGHT
-            new_x += 1.5
+            new_x += PLAYER_SPEED
         if pads[0].held & BUTTON_UP
-            new_y -= 1.5
+            new_y -= PLAYER_SPEED
         if pads[0].held & BUTTON_LEFT
-            new_x -= 1.5
+            new_x -= PLAYER_SPEED
             player_flags |= ATTR_H_FLIP
         if pads[0].held & BUTTON_DOWN
-            new_y += 1.5
+            new_y += PLAYER_SPEED
 
         if new_x >= MIN_X && new_x < MAX_X
             player_x = new_x
@@ -265,14 +266,14 @@ fn update_2p()
 
     if !dead_2p
         if pads[1].held & BUTTON_RIGHT
-            new_x2 += 1.5
+            new_x2 += PLAYER_SPEED
         if pads[1].held & BUTTON_UP
-            new_y2 -= 1.5
+            new_y2 -= PLAYER_SPEED
         if pads[1].held & BUTTON_LEFT
-            new_x2 -= 1.5
+            new_x2 -= PLAYER_SPEED
             player2_flags |= ATTR_H_FLIP
         if pads[1].held & BUTTON_DOWN
-            new_y2 += 1.5
+            new_y2 += PLAYER_SPEED
         if new_x2 >= MIN_X && new_x2 < MAX_X
             player2_x = new_x2
         if new_y2 >= MIN_Y && new_y2 < MAX_Y
@@ -396,8 +397,8 @@ mode game(Bool another_mode, Bool two_player)
                 increment_score_2p()
 
             // check for collision with enemy
-            tile_under_p1 = calc_tile_at_pixel(player_x + 16, player_y - 4)
-            tile_under_p2 = calc_tile_at_pixel(player2_x + 16, player2_y - 4)
+            tile_under_p1 = calc_tile_at_pixel(player_x + 12, player_y - 4)
+            tile_under_p2 = calc_tile_at_pixel(player2_x + 12, player2_y - 4)
 
             last_scroll = scroll_x
 
