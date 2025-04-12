@@ -32,8 +32,6 @@ data /strings
 
 ct UU[] opening_line_starts = UU[] ($2203, $2243, 0, $2201, $2246, $228b, 0, $2206, $2244, $2285, $22cc, 0)
 
-ct U[] delays = U[] ($40, $40, $40)
-
 ct CC/rlz[] opening_gfx = CC/rlz[] (@opening_1, @opening_2, @opening_3)
 
 ct CC/strings[] opening_lines = CC/strings[] (
@@ -69,7 +67,7 @@ nmi attract_nmi()
     {PPUCTRL}(PPUCTRL_NMI_ON)
     {PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP)
 
-    puf.process(%1111)
+    puf.process(PUF_DEFAULT)
 
 fn upload_attract_gfx(U num)
     {PPUCTRL}(0)
@@ -97,6 +95,7 @@ mode attract()
     // instead of a short... no idea why, even if it was a range thing
     // it would wrap around eventually right?
     // ONLY if the delays[] is compile time
+    UU[3] delays = UU[] ($1e0, $1e0, $1e0)
     UU delay = 0
 
     hide_oam(0)
@@ -117,20 +116,20 @@ mode attract()
                 else
                     // all lines drawn
                     attract_done_with_text = true
-        else
-            delay += 1
-            // is this if statement compiled improperly?
-            if delay >= delays[attract_mode_scene]
-                delay = 0
-                attract_mode_scene += 1
-                if attract_mode_scene == 3
-                    goto mode title(true) : preserves /global
-                attract_line_num += 1
-                attract_src_index = 0
-                attract_dst_addr = opening_line_starts[attract_line_num]
-                attract_done_with_text = false
-                attract_line_char = opening_lines[attract_line_num][attract_src_index]
-                upload_attract_gfx(attract_mode_scene)
+
+        delay += 1
+        // is this if statement compiled improperly?
+        if delay >= delays[attract_mode_scene]
+            delay = 0
+            attract_mode_scene += 1
+            if attract_mode_scene == 3
+                goto mode title(true, false) : preserves /global
+            attract_line_num += 1
+            attract_src_index = 0
+            attract_dst_addr = opening_line_starts[attract_line_num]
+            attract_done_with_text = false
+            attract_line_char = opening_lines[attract_line_num][attract_src_index]
+            upload_attract_gfx(attract_mode_scene)
 
         // blink the press start text
         if frame & 31 >= 16
@@ -140,8 +139,9 @@ mode attract()
 
         update_pads()
         if pads[0].pressed & BUTTON_START
-            goto mode title(false)
+            goto mode title(false, false)
             : preserves /global
 
+        update_music_speed()
         frame += 1
         nmi

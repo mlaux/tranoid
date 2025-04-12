@@ -318,7 +318,7 @@ fn check_end_conditions()
         ending_timer -= 1
         if ending_timer == 0
             update_hi_score()
-            goto mode title(false) : preserves /global
+            goto mode title(false, true) : preserves /global
 
 fn update_animations()
     anim_ctr += 1

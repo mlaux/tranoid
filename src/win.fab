@@ -40,5 +40,5 @@ mode win()
     while true
         timer -= 1
         if timer == 0
-            goto mode title(true) : preserves /global
+            goto mode title(true, true) : preserves /global
         nmi

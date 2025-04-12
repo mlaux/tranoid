@@ -61,14 +61,15 @@ ct U SFX_CHIRP = $1
 
 ct UU SCORE_ADDR = $21cf
 
-ct U[] SPEEDS = U[] (3, 3, 1)
+// it's a little slow but this sounds even enough
+ct U[] SPEEDS = U[] (3, 2)
 
 audio(puf1_music, "testexport.txt")
 audio(puf1_sfx, "sfx.txt", "sfx.nsf")
 
 mode main()
     puf.init(system)
-    goto mode title(true) : preserves /global
+    goto mode title(true, true) : preserves /global
     //goto mode game(false, true) : preserves /global
 
 fn draw_hidden_credit()
@@ -110,6 +111,15 @@ fn draw_player_icon()
         ppu_reset_addr(PLAYER_SELECT_POS_2P)
         {PPUDATA}(0)
 
+fn update_music_speed()
+    frames_this_speed += 1
+    if frames_this_speed == SPEEDS[speed_idx]
+        frames_this_speed = 0
+        speed_idx += 1
+        if speed_idx == len(SPEEDS)
+            speed_idx = 0
+    puf.set_speed(SPEEDS[speed_idx])
+
 nmi title_nmi()
     if ready
         ppu_upload_oam_poll_pads(0)
@@ -136,16 +146,9 @@ nmi title_nmi()
         // not sure which is better
         // ppu_reset_scroll(216, scroll.a)
 
-    puf.set_speed(SPEEDS[speed_idx])
     puf.process(PUF_DEFAULT)
-    frames_this_speed += 1
-    if frames_this_speed == SPEEDS[speed_idx]
-        frames_this_speed = 0
-        speed_idx += 1
-        if speed_idx == len(SPEEDS)
-            speed_idx = 0
 
-mode title(Bool scroll_logo)
+mode title(Bool scroll_logo, Bool restart_music)
 : nmi title_nmi
     {PPUCTRL}(0)
     {PPUMASK}(0)
@@ -171,7 +174,8 @@ mode title(Bool scroll_logo)
     //{PPUMASK}(PPUMASK_ON | PPUMASK_NO_CLIP)
     {PPUCTRL}(PPUCTRL_NMI_ON)
 
-    puf.play_track(1)
+    if restart_music
+        puf.play_track(1)
 
     while true
         if scroll != 0
@@ -207,10 +211,11 @@ mode title(Bool scroll_logo)
             : preserves /global
 
         frame += 1
-        if frame >= $200
-            //goto mode attract()
-            //: preserves /global
+        if frame >= $1e0
+            goto mode attract()
+            : preserves /global
 
+        update_music_speed()
         nmi
 
 chrrom
