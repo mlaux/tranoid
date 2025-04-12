@@ -304,8 +304,8 @@ mode game(Bool another_mode, Bool two_player)
         load_column()
 
     hide_oam(0)
-    // use palette 1 because it's all blank
-    set_oam(0, 0, SCORE_SPLIT_POINT, SPRITE_ZERO_ID, 1)
+    // use palette 2 because it's all blank
+    set_oam(0, 0, SCORE_SPLIT_POINT, SPRITE_ZERO_ID, 2)
 
     {PPUCTRL}(PPUCTRL_NMI_ON)
 

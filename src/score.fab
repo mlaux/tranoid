@@ -49,12 +49,11 @@ fn update_hi_score()
     UU current_p2 = atoi(p2_score)
     UU hi = atoi(hi_score)
 
-    if current_p1 <= hi
-        return
-    for U k = 0; k < 5; k += 1
-        hi_score[k] = p1_score[k]
+    if current_p1 > hi
+        for U k = 0; k < 5; k += 1
+            hi_score[k] = p1_score[k]
 
-    if current_p2 <= hi && current_p2 <= current_p1
-        return
-    for U k = 0; k < 5; k += 1
-        hi_score[k] = p2_score[k]
+    hi = atoi(hi_score)
+    if current_p2 > hi
+        for U k = 0; k < 5; k += 1
+            hi_score[k] = p2_score[k]
