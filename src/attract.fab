@@ -44,6 +44,8 @@ ct U[] opening_palettes1 = U[] ($12, $16, $22)
 ct U[] opening_palettes2 = U[] ($2c, $1c, $15)
 ct U[] opening_palettes3 = U[] ($32, $10, $32)
 
+ct UU[3] delays = UU[] ($1e0, $1e0, $1e0)
+
 vars /attract
     U attract_src_index = 0
     UU attract_dst_addr = opening_line_starts[0]
@@ -91,11 +93,6 @@ mode attract()
     frame = 0
     U attract_mode_scene = 0
     U attract_line_num = 0
-    // this freezes on the first screen if i use a byte here
-    // instead of a short... no idea why, even if it was a range thing
-    // it would wrap around eventually right?
-    // ONLY if the delays[] is compile time
-    UU[3] delays = UU[] ($1e0, $1e0, $1e0)
     UU delay = 0
 
     hide_oam(0)
@@ -118,7 +115,6 @@ mode attract()
                     attract_done_with_text = true
 
         delay += 1
-        // is this if statement compiled improperly?
         if delay >= delays[attract_mode_scene]
             delay = 0
             attract_mode_scene += 1
