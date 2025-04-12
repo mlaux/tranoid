@@ -31,6 +31,7 @@ vars /title
     UU frame = 0
     Bool two_player = false
     U speed_idx = 0
+    U frames_this_speed = 0
 
 ct U[] hidden_credit = U[] (
     $70, $71, $72, $0, // NES
@@ -60,10 +61,7 @@ ct U SFX_CHIRP = $1
 
 ct UU SCORE_ADDR = $21cf
 
-// this isn't even but i can't get it to work with just the simple
-ct U[] SPEEDS = U[] (2, 3, 3, 2, 3, 2, 3, 2, 3, 2, 2, 3)
-//ct U[] SPEEDS = U[] (3, 3, 2)
-// 8 3s and 4 2s
+ct U[] SPEEDS = U[] (3, 3, 1)
 
 audio(puf1_music, "testexport.txt")
 audio(puf1_sfx, "sfx.txt", "sfx.nsf")
@@ -139,11 +137,13 @@ nmi title_nmi()
         // ppu_reset_scroll(216, scroll.a)
 
     puf.set_speed(SPEEDS[speed_idx])
-    speed_idx += 1
-    if speed_idx == len(SPEEDS)
-        speed_idx = 0
-
     puf.process(PUF_DEFAULT)
+    frames_this_speed += 1
+    if frames_this_speed == SPEEDS[speed_idx]
+        frames_this_speed = 0
+        speed_idx += 1
+        if speed_idx == len(SPEEDS)
+            speed_idx = 0
 
 mode title(Bool scroll_logo)
 : nmi title_nmi
