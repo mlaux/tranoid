@@ -14,7 +14,7 @@ ct U[] game_palette = U[] (
     $0f,
 )
 
-ct U MIN_X = $10
+ct U MIN_X = $8
 ct U MAX_X = $f0
 ct U MIN_Y = $38
 ct U MAX_Y = $b8
