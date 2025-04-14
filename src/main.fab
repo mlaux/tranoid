@@ -24,6 +24,7 @@ data /rlz
 vars /global
     // last digit will always be 00 for that arcade feel
     U[] hi_score = U[5](ZERO_TILE)
+    U rran_seed = 0
 
 vars /title
     UF scroll
@@ -206,21 +207,23 @@ mode title(Bool scroll_logo, Bool restart_music)
             puf.play_sfx(SFX_CHIRP)
 
         Bool another_mode = pads[0].held & BUTTON_SELECT
+        Bool do_rran = pads[0].held & BUTTON_B
         if scroll == 0 && pads[0].pressed & BUTTON_START
-            goto mode game(another_mode, two_player)
+            goto mode game(another_mode, two_player, do_rran)
             : preserves /global
 
         frame += 1
         if frame >= $1e0
             goto mode attract()
             : preserves /global
+        rran_seed += 1
 
         update_music_speed()
         nmi
 
 chrrom
     file(fmt, "title.chr")
-    // odd ones actually do not matter because 16x16 sprites always get their data from $0
+    // odd ones actually do not matter because 8x16 sprites always get their data from $0
     file(fmt, "title.chr")
     file(fmt, "opening1/opening1.chr")
     file(fmt, "title.chr")

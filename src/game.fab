@@ -31,6 +31,7 @@ ct U TILE_LEFT_DEAD1 = $c0
 ct U TILE_RIGHT_DEAD1 = $c2
 ct U TILE_LEFT_DEAD2 = $c4
 ct U TILE_RIGHT_DEAD2 = $c6
+ct U TILE_TRANSPARENT = $c8
 
 // BG tiles
 ct U TRAN_ICON = $f7
@@ -63,8 +64,10 @@ vars /game
     Bool dead_2p = false
     Bool stop_music = false
     Bool play_dead_sound = false
+    Bool r_random = true
 
     U ending_timer = 127
+    U invincible_timer = 127
     U active_nt = 0
     UF scroll_x = 0
     UF last_scroll = 0
@@ -131,9 +134,9 @@ nmi game_nmi()
         ppu_upload_oam_poll_pads(0)
         ppu_upload_palette()
 
-    // does not work if i have all three conditions in one if statement for some reason
     {PPUSTATUS}()
-    if !dead_1p
+    // does not work if i have all conditions in one if statement for some reason
+    if !dead_1p && invincible_timer == 0
         if check_tile_under_player(tile_under_p1) || check_tile_under_player(tile_under_p1 + $20)
             // only stop the music if the other player is dead too
             if U(is_two_player) == U(dead_2p)
@@ -141,7 +144,7 @@ nmi game_nmi()
             play_dead_sound = true
             dead_1p = true
 
-    if is_two_player && !dead_2p 
+    if is_two_player && !dead_2p && invincible_timer == 0
         if (check_tile_under_player(tile_under_p2) || check_tile_under_player(tile_under_p2 + $20))
             if dead_1p
                 stop_music = true
@@ -171,14 +174,24 @@ nmi game_nmi()
 
     puf.process(%1111)
 
-fn emit_tile(U k)
+fn emit_tile(U note, U k)
 : +inline
-    if (use_chart{chart_offset} >> k) & 1
+    if (note >> k) & 1
         {PPUDATA}(ENEMY_ICON)
         {PPUDATA}(ENEMY_LEGS)
     else
         {PPUDATA}(EMPTY_TOP_BORDER)
         {PPUDATA}(EMPTY_LANE)
+
+fn randomize(U val) U
+    U num_times = rran_seed & 7
+    U scratch = val & $80
+    val &= $7f
+    for U k = 0; k < num_times; k += 1
+        val <<= 1 
+        val |= (val & $80) >> 7
+        val &= $7f
+    return scratch | val
 
 fn load_column()
     if chart_offset == len(chart)
@@ -191,20 +204,25 @@ fn load_column()
     {PPUADDR}(tile_ppuaddr_table()[next_column].b)
     {PPUADDR}(tile_ppuaddr_table()[next_column].a)
     {PPUDATA}(EMPTY_TOP_BORDER)
-    if (use_chart{chart_offset} >> 7) & 1
+
+    U note = use_chart{chart_offset}
+    if r_random
+        note = randomize(note)
+
+    if (note >> 7) & 1
         {PPUDATA}(ENEMY_ICON_SCRATCH)
         {PPUDATA}(ENEMY_LEGS)
     else
         {PPUDATA}(EMPTY_LANE)
         {PPUDATA}(EMPTY_LANE)
     {PPUDATA}($00)
-    emit_tile(6)
-    emit_tile(5)
-    emit_tile(4)
-    emit_tile(3)
-    emit_tile(2)
-    emit_tile(1)
-    emit_tile(0)
+    emit_tile(note, 6)
+    emit_tile(note, 5)
+    emit_tile(note, 4)
+    emit_tile(note, 3)
+    emit_tile(note, 2)
+    emit_tile(note, 1)
+    emit_tile(note, 0)
     {PPUDATA}(EMPTY_TOP_BORDER)
 
     next_column += 1
@@ -237,6 +255,7 @@ fn update_1p()
 
     U tile_left = TILE_LEFT_STANDING
     U tile_right = TILE_RIGHT_STANDING
+
     if anim_ctr >= 6
         tile_left = TILE_LEFT_RUNNING
         tile_right = TILE_RIGHT_RUNNING
@@ -247,6 +266,10 @@ fn update_1p()
         if anim_ctr >= 6
             tile_left = TILE_LEFT_DEAD2
             tile_right = TILE_RIGHT_DEAD2
+
+    if invincible_timer & 7 >= 4
+        tile_left = TILE_TRANSPARENT
+        tile_right = TILE_TRANSPARENT
 
     // need to swap the tile IDs not just the tile contents
     if player_flags
@@ -294,6 +317,10 @@ fn update_2p()
             tile_left = TILE_LEFT_DEAD2
             tile_right = TILE_RIGHT_DEAD2
 
+    if invincible_timer & 7 >= 4
+        tile_left = TILE_TRANSPARENT
+        tile_right = TILE_TRANSPARENT
+
     if player2_flags
         U temp = tile_left
         tile_left = tile_right
@@ -328,6 +355,8 @@ fn update_animations()
         state(0)
     if anim_ctr >= 12
         anim_ctr = 0
+    if invincible_timer > 0
+        invincible_timer -= 1
 
 fn check_sound_flags()
     if stop_music
@@ -337,9 +366,10 @@ fn check_sound_flags()
         puf.play_sfx(SFX_DEAD)
         play_dead_sound = false
 
-mode game(Bool another_mode, Bool two_player)
+mode game(Bool another_mode, Bool two_player, Bool do_rran)
 : nmi game_nmi
     is_two_player = two_player
+    r_random = do_rran
 
     {PPUCTRL}(0)
     {PPUMASK}(0)
