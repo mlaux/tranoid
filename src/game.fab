@@ -410,8 +410,10 @@ mode game(Bool another_mode, Bool two_player)
             // there is no exact representation of 1.6 in 8.8 bit fixed point, so this
             // gets rounded to 1.6015625, but it's close enough that I can't notice
             // the song desyncing
-
-            if (scroll_x += 1.6) // evaluates to true if it overflowed
+            UF scroll_update = 1.6
+            if another_mode
+                scroll_update = 3.2
+            if (scroll_x += scroll_update) // evaluates to true if it overflowed
                 active_nt ^= PPUCTRL_NT_2400
 
         update_animations()
