@@ -74,7 +74,7 @@ nmi attract_nmi()
 fn upload_attract_gfx(U num)
     {PPUCTRL}(0)
     {PPUMASK}(0)
-    state(num + 1)
+    set_bank(num + 1)
 
     palette[0] = opening_palettes1[num]
     palette[1] = opening_palettes2[num]

@@ -350,9 +350,9 @@ fn check_end_conditions()
 fn update_animations()
     anim_ctr += 1
     if anim_ctr >= 6
-        state(3)
+        set_bank(3)
     else
-        state(0)
+        set_bank(0)
     if anim_ctr >= 12
         anim_ctr = 0
     if invincible_timer > 0

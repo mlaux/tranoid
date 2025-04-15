@@ -68,6 +68,14 @@ ct U[] SPEEDS = U[] (3, 2)
 audio(puf1_music, "testexport.txt")
 audio(puf1_sfx, "sfx.txt", "sfx.nsf")
 
+asm fn set_bank(U bank)
+: employs
+    default
+        lda &bank
+        tax
+        sta $8000, x
+        rts
+
 mode main()
     puf.init(system)
     goto mode title(true, true) : preserves /global
@@ -167,7 +175,7 @@ mode title(Bool scroll_logo, Bool restart_music)
     else
         scroll = 0
 
-    state(0)
+    set_bank(0)
     hide_oam(0)
     set_oam(0, $50, sprite_y.a, FAKE_SPRITE_ID, 0)
 
