@@ -374,7 +374,7 @@ mode game(Bool another_mode, Bool two_player, Bool do_rran)
     {PPUCTRL}(0)
     {PPUMASK}(0)
 
-    state(0)
+    set_bank(0)
 
     if another_mode
         use_chart = @another
