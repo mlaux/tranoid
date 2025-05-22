@@ -62,8 +62,7 @@ ct U SFX_CHIRP = $1
 
 ct UU SCORE_ADDR = $21cf
 
-// it's a little slow but this sounds even enough
-ct U[] SPEEDS = U[] (3, 2)
+ct U[] SPEEDS = U[] (3, 2, 2)
 
 audio(puf1_music, "testexport.txt")
 audio(puf1_sfx, "sfx.txt", "sfx.nsf")
@@ -75,6 +74,10 @@ asm fn set_bank(U bank)
         tax
         sta $8000, x
         rts
+
+fn set_bank2(U bank)
+    // i actually didn't know this syntax can use an address that's computed at runtime
+    {$8000 + UU(bank)}(bank)
 
 mode main()
     puf.init(system)
@@ -221,7 +224,7 @@ mode title(Bool scroll_logo, Bool restart_music)
             : preserves /global
 
         frame += 1
-        if frame >= $1e0
+        if frame >= $1c0
             goto mode attract()
             : preserves /global
         rran_seed += 1

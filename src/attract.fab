@@ -44,7 +44,7 @@ ct U[] opening_palettes1 = U[] ($12, $16, $22)
 ct U[] opening_palettes2 = U[] ($2c, $1c, $15)
 ct U[] opening_palettes3 = U[] ($32, $10, $32)
 
-ct UU[3] delays = UU[] ($1e0, $1e0, $1e0)
+ct UU[3] delays = UU[] ($1c0, $1c0, $1c0)
 
 vars /attract
     U attract_src_index = 0

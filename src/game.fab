@@ -52,6 +52,9 @@ ct U SPRITE_ZERO_ID = $b8
 ct UU P1_SCORE_DEST_ADDR = $2045
 ct UU P2_SCORE_DEST_ADDR = $2058
 
+// 10 frames = eighth note
+ct U ANIM_SPEED = 10
+
 vars /game
     Bool is_two_player = false
     U[] p1_score = U[5](ZERO_TILE)
@@ -253,17 +256,17 @@ fn update_1p()
         if new_y >= MIN_Y && new_y < MAX_Y
             player_y = new_y
 
-    U tile_left = TILE_LEFT_STANDING
-    U tile_right = TILE_RIGHT_STANDING
+    U tile_left = TILE_LEFT_RUNNING
+    U tile_right = TILE_RIGHT_RUNNING
 
-    if anim_ctr >= 6
-        tile_left = TILE_LEFT_RUNNING
-        tile_right = TILE_RIGHT_RUNNING
+    if anim_ctr >= ANIM_SPEED / 2
+        tile_left = TILE_LEFT_STANDING
+        tile_right = TILE_RIGHT_STANDING
 
     if dead_1p
         tile_left = TILE_LEFT_DEAD1
         tile_right = TILE_RIGHT_DEAD1
-        if anim_ctr >= 6
+        if anim_ctr >= ANIM_SPEED / 2
             tile_left = TILE_LEFT_DEAD2
             tile_right = TILE_RIGHT_DEAD2
 
@@ -303,17 +306,17 @@ fn update_2p()
         if new_y2 >= MIN_Y && new_y2 < MAX_Y
             player2_y = new_y2
 
-    U tile_left = TILE_LEFT_STANDING
-    U tile_right = TILE_RIGHT_STANDING
+    U tile_left = TILE_LEFT_RUNNING
+    U tile_right = TILE_RIGHT_RUNNING
 
-    if anim_ctr >= 6
-        tile_left = TILE_LEFT_RUNNING
-        tile_right = TILE_RIGHT_RUNNING
+    if anim_ctr >= ANIM_SPEED / 2
+        tile_left = TILE_LEFT_STANDING
+        tile_right = TILE_RIGHT_STANDING
 
     if dead_2p
         tile_left = TILE_LEFT_DEAD1
         tile_right = TILE_RIGHT_DEAD1
-        if anim_ctr >= 6
+        if anim_ctr >= ANIM_SPEED / 2
             tile_left = TILE_LEFT_DEAD2
             tile_right = TILE_RIGHT_DEAD2
 
@@ -349,11 +352,11 @@ fn check_end_conditions()
 
 fn update_animations()
     anim_ctr += 1
-    if anim_ctr >= 6
+    if anim_ctr >= ANIM_SPEED / 2
         set_bank(3)
     else
         set_bank(0)
-    if anim_ctr >= 12
+    if anim_ctr >= ANIM_SPEED
         anim_ctr = 0
     if invincible_timer > 0
         invincible_timer -= 1
