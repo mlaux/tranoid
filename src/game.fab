@@ -21,6 +21,7 @@ ct U MAX_Y = $b8
 ct U WIDTH_IN_TILES = $40
 ct U START_OFFSET = $10
 ct Real PLAYER_SPEED = 1.6
+ct Real PLAYER_SPEED_ANOTHER = 3.2
 
 // sprite tiles
 ct U TILE_LEFT_RUNNING = $b0
@@ -68,6 +69,7 @@ vars /game
     Bool stop_music = false
     Bool play_dead_sound = false
     Bool r_random = true
+    UF player_speed
 
     U ending_timer = 127
     U invincible_timer = 127
@@ -242,14 +244,14 @@ fn update_1p()
 
     if !dead_1p
         if pads[0].held & BUTTON_RIGHT
-            new_x += PLAYER_SPEED
+            new_x += player_speed
         if pads[0].held & BUTTON_UP
-            new_y -= PLAYER_SPEED
+            new_y -= player_speed
         if pads[0].held & BUTTON_LEFT
-            new_x -= PLAYER_SPEED
+            new_x -= player_speed
             player_flags |= ATTR_H_FLIP
         if pads[0].held & BUTTON_DOWN
-            new_y += PLAYER_SPEED
+            new_y += player_speed
 
         if new_x >= MIN_X && new_x < MAX_X
             player_x = new_x
@@ -293,14 +295,14 @@ fn update_2p()
 
     if !dead_2p
         if pads[1].held & BUTTON_RIGHT
-            new_x2 += PLAYER_SPEED
+            new_x2 += player_speed
         if pads[1].held & BUTTON_UP
-            new_y2 -= PLAYER_SPEED
+            new_y2 -= player_speed
         if pads[1].held & BUTTON_LEFT
-            new_x2 -= PLAYER_SPEED
+            new_x2 -= player_speed
             player2_flags |= ATTR_H_FLIP
         if pads[1].held & BUTTON_DOWN
-            new_y2 += PLAYER_SPEED
+            new_y2 += player_speed
         if new_x2 >= MIN_X && new_x2 < MAX_X
             player2_x = new_x2
         if new_y2 >= MIN_Y && new_y2 < MAX_Y
@@ -373,6 +375,10 @@ mode game(Bool another_mode, Bool two_player, Bool do_rran)
 : nmi game_nmi
     is_two_player = two_player
     r_random = do_rran
+    if another_mode
+        player_speed = PLAYER_SPEED_ANOTHER
+    else
+        player_speed = PLAYER_SPEED
 
     {PPUCTRL}(0)
     {PPUMASK}(0)
