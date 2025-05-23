@@ -270,7 +270,7 @@ fn update_1p()
             tile_left = TILE_LEFT_DEAD2
             tile_right = TILE_RIGHT_DEAD2
 
-    if invincible_timer & 7 >= 4
+    if invincible_timer & 1 == 1
         tile_left = TILE_TRANSPARENT
         tile_right = TILE_TRANSPARENT
 

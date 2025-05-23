@@ -38,10 +38,10 @@ ct U[] hidden_credit = U[] (
     $70, $71, $72, $0, // NES
     $73, $79, $74, $75, $0, // PORT
     $76, $77, $0, // BY
-    $78, $79, $70, $72, $75, $78, $7a, $72, $75, $0, // CONSTCAST
-    $7b, $7c, $7b, $7d // 2025
+    $78, $79, $70, $72, $75, $78, $7a, $72, $75, // CONSTCAST
 )
-ct UU HIDDEN_CREDIT_POS = $2063
+ct UU HIDDEN_CREDIT_POS = $2066
+ct UU BUILD_DATE_POS = $208c
 ct U PLAYER_SELECT_ICON = $f7
 ct UU PLAYER_SELECT_POS_1P = $226a
 ct UU PLAYER_SELECT_POS_2P = $22aa
@@ -63,6 +63,13 @@ ct U SFX_CHIRP = $1
 ct UU SCORE_ADDR = $21cf
 
 ct U[] SPEEDS = U[] (3, 2, 2)
+
+ct fn get_build_date() U[8]
+    U[8] contents = file(fmt, "../today.txt")
+    U[8] ret
+    for U k = 0; k < 8; k += 1
+        ret[k] = contents[k] + $a0 // adjust for number tile location
+    return ret
 
 audio(puf1_music, "testexport.txt")
 audio(puf1_sfx, "sfx.txt", "sfx.nsf")
@@ -89,6 +96,11 @@ fn draw_hidden_credit()
     ppu_reset_addr(HIDDEN_CREDIT_POS)
     for U i = 0; i < len(hidden_credit); i += 1
         {PPUDATA}(hidden_credit[i])
+
+    U[8] build_date = get_build_date()
+    ppu_reset_addr(BUILD_DATE_POS)
+    for U i = 0; i < len(build_date); i += 1
+        {PPUDATA}(build_date[i])
 
 fn draw_5key_frog_icon(Bool show)
     if show
