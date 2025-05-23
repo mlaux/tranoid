@@ -42,6 +42,8 @@ ct U[] hidden_credit = U[] (
 )
 ct UU HIDDEN_CREDIT_POS = $2066
 ct UU BUILD_DATE_POS = $208c
+ct UU R_RAN_POS_1P = $2275
+ct UU R_RAN_POS_2P = $22b6
 ct U PLAYER_SELECT_ICON = $f7
 ct UU PLAYER_SELECT_POS_1P = $226a
 ct UU PLAYER_SELECT_POS_2P = $22aa
@@ -122,6 +124,32 @@ fn draw_5key_frog_icon(Bool show)
         ppu_set_addr(FROG_DEST_BOTTOM_RIGHT)
         {PPUDATA}(0)
 
+fn draw_rran_text(Bool show)
+    ppu_reset_addr(R_RAN_POS_1P)
+    {PPUDATA}(0)
+    {PPUDATA}(0)
+    {PPUDATA}(0)
+    {PPUDATA}(0)
+    {PPUDATA}(0)
+
+    ppu_reset_addr(R_RAN_POS_2P)
+    {PPUDATA}(0)
+    {PPUDATA}(0)
+    {PPUDATA}(0)
+    {PPUDATA}(0)
+    {PPUDATA}(0)
+
+    if show
+        UU use_pos = R_RAN_POS_1P
+        if two_player
+            use_pos = R_RAN_POS_2P
+        ppu_reset_addr(use_pos)
+        {PPUDATA}($eb)
+        {PPUDATA}($7e)
+        {PPUDATA}($eb)
+        {PPUDATA}($da)
+        {PPUDATA}($e7)
+
 fn draw_player_icon()
 : +inline
     if two_player
@@ -149,11 +177,12 @@ nmi title_nmi()
         ppu_upload_oam_poll_pads(0)
         ppu_upload_palette()
 
-        if pads[0].pressed & BUTTON_SELECT
+        if (pads[0].held & BUTTON_SELECT) && (pads[0].held & BUTTON_B)
             draw_hidden_credit()
 
         draw_score(hi_score, SCORE_ADDR)
         draw_5key_frog_icon(pads[0].held & BUTTON_SELECT)
+        draw_rran_text(pads[0].held & BUTTON_B)
         draw_player_icon()
 
     ppu_reset_scroll(0, scroll.a)
