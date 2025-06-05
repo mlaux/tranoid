@@ -8,6 +8,10 @@
 
 This is a playable version of the BGA from the beatmania IIDX song [TRANOID](https://www.youtube.com/watch?v=3rSeU75edBk), ported to the NES/Famicom with NESFab. The port includes a couple extra features not shown in the original video, like 2-player mode and scorekeeping. 
 
+## Get it
+
+You can download the latest release [here](https://github.com/mlaux/tranoid/releases/latest). To compile the game yourself, the only requirement is having NESFab installed in `../nesfab/`. Just clone the repo and run `./compile.sh`. I used NESFab 1.5 to develop this, but other versions might work.
+
 ## Controls
 
 * Start button to start
@@ -17,10 +21,6 @@ This is a playable version of the BGA from the beatmania IIDX song [TRANOID](htt
 
 * Hold B while starting to select R-RANDOM.
 * Hold Select while starting to select the ANOTHER CHART... how far can you get?
-
-## Compiling
-
-The only requirement is having NESFab installed in `../nesfab/`. Just clone the repo and run `./compile.sh`. I used NESFab 1.5 to develop this, but other versions might work.
 
 ## Real hardware
 
