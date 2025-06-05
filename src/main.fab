@@ -73,7 +73,7 @@ ct fn get_build_date() U[8]
         ret[k] = contents[k] + $a0 // adjust for number tile location
     return ret
 
-audio(puf1_music, "testexport.txt")
+audio(puf1_music, "music.txt")
 audio(puf1_sfx, "sfx.txt", "sfx.nsf")
 
 asm fn set_bank(U bank)
